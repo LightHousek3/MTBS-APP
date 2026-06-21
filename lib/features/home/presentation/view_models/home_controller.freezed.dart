@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$HomeState {
 
- List<HomeBanner> get banners; List<Movie> get nowShowing; List<Movie> get comingSoon; List<Promotion> get promotions; List<News> get news; List<Festival> get festivals; List<String> get locations; String? get selectedLocation;
+ List<HomeBanner> get banners; List<Movie> get nowShowing; List<Movie> get recommendedMovies; List<Movie> get comingSoon; List<Promotion> get promotions; List<News> get news; List<Festival> get festivals; List<String> get locations; String? get selectedLocation;
 /// Create a copy of HomeState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $HomeStateCopyWith<HomeState> get copyWith => _$HomeStateCopyWithImpl<HomeState>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HomeState&&const DeepCollectionEquality().equals(other.banners, banners)&&const DeepCollectionEquality().equals(other.nowShowing, nowShowing)&&const DeepCollectionEquality().equals(other.comingSoon, comingSoon)&&const DeepCollectionEquality().equals(other.promotions, promotions)&&const DeepCollectionEquality().equals(other.news, news)&&const DeepCollectionEquality().equals(other.festivals, festivals)&&const DeepCollectionEquality().equals(other.locations, locations)&&(identical(other.selectedLocation, selectedLocation) || other.selectedLocation == selectedLocation));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HomeState&&const DeepCollectionEquality().equals(other.banners, banners)&&const DeepCollectionEquality().equals(other.nowShowing, nowShowing)&&const DeepCollectionEquality().equals(other.recommendedMovies, recommendedMovies)&&const DeepCollectionEquality().equals(other.comingSoon, comingSoon)&&const DeepCollectionEquality().equals(other.promotions, promotions)&&const DeepCollectionEquality().equals(other.news, news)&&const DeepCollectionEquality().equals(other.festivals, festivals)&&const DeepCollectionEquality().equals(other.locations, locations)&&(identical(other.selectedLocation, selectedLocation) || other.selectedLocation == selectedLocation));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(banners),const DeepCollectionEquality().hash(nowShowing),const DeepCollectionEquality().hash(comingSoon),const DeepCollectionEquality().hash(promotions),const DeepCollectionEquality().hash(news),const DeepCollectionEquality().hash(festivals),const DeepCollectionEquality().hash(locations),selectedLocation);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(banners),const DeepCollectionEquality().hash(nowShowing),const DeepCollectionEquality().hash(recommendedMovies),const DeepCollectionEquality().hash(comingSoon),const DeepCollectionEquality().hash(promotions),const DeepCollectionEquality().hash(news),const DeepCollectionEquality().hash(festivals),const DeepCollectionEquality().hash(locations),selectedLocation);
 
 @override
 String toString() {
-  return 'HomeState(banners: $banners, nowShowing: $nowShowing, comingSoon: $comingSoon, promotions: $promotions, news: $news, festivals: $festivals, locations: $locations, selectedLocation: $selectedLocation)';
+  return 'HomeState(banners: $banners, nowShowing: $nowShowing, recommendedMovies: $recommendedMovies, comingSoon: $comingSoon, promotions: $promotions, news: $news, festivals: $festivals, locations: $locations, selectedLocation: $selectedLocation)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $HomeStateCopyWith<$Res>  {
   factory $HomeStateCopyWith(HomeState value, $Res Function(HomeState) _then) = _$HomeStateCopyWithImpl;
 @useResult
 $Res call({
- List<HomeBanner> banners, List<Movie> nowShowing, List<Movie> comingSoon, List<Promotion> promotions, List<News> news, List<Festival> festivals, List<String> locations, String? selectedLocation
+ List<HomeBanner> banners, List<Movie> nowShowing, List<Movie> recommendedMovies, List<Movie> comingSoon, List<Promotion> promotions, List<News> news, List<Festival> festivals, List<String> locations, String? selectedLocation
 });
 
 
@@ -62,10 +62,11 @@ class _$HomeStateCopyWithImpl<$Res>
 
 /// Create a copy of HomeState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? banners = null,Object? nowShowing = null,Object? comingSoon = null,Object? promotions = null,Object? news = null,Object? festivals = null,Object? locations = null,Object? selectedLocation = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? banners = null,Object? nowShowing = null,Object? recommendedMovies = null,Object? comingSoon = null,Object? promotions = null,Object? news = null,Object? festivals = null,Object? locations = null,Object? selectedLocation = freezed,}) {
   return _then(_self.copyWith(
 banners: null == banners ? _self.banners : banners // ignore: cast_nullable_to_non_nullable
 as List<HomeBanner>,nowShowing: null == nowShowing ? _self.nowShowing : nowShowing // ignore: cast_nullable_to_non_nullable
+as List<Movie>,recommendedMovies: null == recommendedMovies ? _self.recommendedMovies : recommendedMovies // ignore: cast_nullable_to_non_nullable
 as List<Movie>,comingSoon: null == comingSoon ? _self.comingSoon : comingSoon // ignore: cast_nullable_to_non_nullable
 as List<Movie>,promotions: null == promotions ? _self.promotions : promotions // ignore: cast_nullable_to_non_nullable
 as List<Promotion>,news: null == news ? _self.news : news // ignore: cast_nullable_to_non_nullable
@@ -157,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<HomeBanner> banners,  List<Movie> nowShowing,  List<Movie> comingSoon,  List<Promotion> promotions,  List<News> news,  List<Festival> festivals,  List<String> locations,  String? selectedLocation)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<HomeBanner> banners,  List<Movie> nowShowing,  List<Movie> recommendedMovies,  List<Movie> comingSoon,  List<Promotion> promotions,  List<News> news,  List<Festival> festivals,  List<String> locations,  String? selectedLocation)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HomeState() when $default != null:
-return $default(_that.banners,_that.nowShowing,_that.comingSoon,_that.promotions,_that.news,_that.festivals,_that.locations,_that.selectedLocation);case _:
+return $default(_that.banners,_that.nowShowing,_that.recommendedMovies,_that.comingSoon,_that.promotions,_that.news,_that.festivals,_that.locations,_that.selectedLocation);case _:
   return orElse();
 
 }
@@ -178,10 +179,10 @@ return $default(_that.banners,_that.nowShowing,_that.comingSoon,_that.promotions
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<HomeBanner> banners,  List<Movie> nowShowing,  List<Movie> comingSoon,  List<Promotion> promotions,  List<News> news,  List<Festival> festivals,  List<String> locations,  String? selectedLocation)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<HomeBanner> banners,  List<Movie> nowShowing,  List<Movie> recommendedMovies,  List<Movie> comingSoon,  List<Promotion> promotions,  List<News> news,  List<Festival> festivals,  List<String> locations,  String? selectedLocation)  $default,) {final _that = this;
 switch (_that) {
 case _HomeState():
-return $default(_that.banners,_that.nowShowing,_that.comingSoon,_that.promotions,_that.news,_that.festivals,_that.locations,_that.selectedLocation);case _:
+return $default(_that.banners,_that.nowShowing,_that.recommendedMovies,_that.comingSoon,_that.promotions,_that.news,_that.festivals,_that.locations,_that.selectedLocation);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +199,10 @@ return $default(_that.banners,_that.nowShowing,_that.comingSoon,_that.promotions
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<HomeBanner> banners,  List<Movie> nowShowing,  List<Movie> comingSoon,  List<Promotion> promotions,  List<News> news,  List<Festival> festivals,  List<String> locations,  String? selectedLocation)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<HomeBanner> banners,  List<Movie> nowShowing,  List<Movie> recommendedMovies,  List<Movie> comingSoon,  List<Promotion> promotions,  List<News> news,  List<Festival> festivals,  List<String> locations,  String? selectedLocation)?  $default,) {final _that = this;
 switch (_that) {
 case _HomeState() when $default != null:
-return $default(_that.banners,_that.nowShowing,_that.comingSoon,_that.promotions,_that.news,_that.festivals,_that.locations,_that.selectedLocation);case _:
+return $default(_that.banners,_that.nowShowing,_that.recommendedMovies,_that.comingSoon,_that.promotions,_that.news,_that.festivals,_that.locations,_that.selectedLocation);case _:
   return null;
 
 }
@@ -213,7 +214,7 @@ return $default(_that.banners,_that.nowShowing,_that.comingSoon,_that.promotions
 
 
 class _HomeState implements HomeState {
-  const _HomeState({final  List<HomeBanner> banners = const <HomeBanner>[], final  List<Movie> nowShowing = const <Movie>[], final  List<Movie> comingSoon = const <Movie>[], final  List<Promotion> promotions = const <Promotion>[], final  List<News> news = const <News>[], final  List<Festival> festivals = const <Festival>[], final  List<String> locations = const <String>[], this.selectedLocation}): _banners = banners,_nowShowing = nowShowing,_comingSoon = comingSoon,_promotions = promotions,_news = news,_festivals = festivals,_locations = locations;
+  const _HomeState({final  List<HomeBanner> banners = const <HomeBanner>[], final  List<Movie> nowShowing = const <Movie>[], final  List<Movie> recommendedMovies = const <Movie>[], final  List<Movie> comingSoon = const <Movie>[], final  List<Promotion> promotions = const <Promotion>[], final  List<News> news = const <News>[], final  List<Festival> festivals = const <Festival>[], final  List<String> locations = const <String>[], this.selectedLocation}): _banners = banners,_nowShowing = nowShowing,_recommendedMovies = recommendedMovies,_comingSoon = comingSoon,_promotions = promotions,_news = news,_festivals = festivals,_locations = locations;
   
 
  final  List<HomeBanner> _banners;
@@ -228,6 +229,13 @@ class _HomeState implements HomeState {
   if (_nowShowing is EqualUnmodifiableListView) return _nowShowing;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_nowShowing);
+}
+
+ final  List<Movie> _recommendedMovies;
+@override@JsonKey() List<Movie> get recommendedMovies {
+  if (_recommendedMovies is EqualUnmodifiableListView) return _recommendedMovies;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_recommendedMovies);
 }
 
  final  List<Movie> _comingSoon;
@@ -277,16 +285,16 @@ _$HomeStateCopyWith<_HomeState> get copyWith => __$HomeStateCopyWithImpl<_HomeSt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HomeState&&const DeepCollectionEquality().equals(other._banners, _banners)&&const DeepCollectionEquality().equals(other._nowShowing, _nowShowing)&&const DeepCollectionEquality().equals(other._comingSoon, _comingSoon)&&const DeepCollectionEquality().equals(other._promotions, _promotions)&&const DeepCollectionEquality().equals(other._news, _news)&&const DeepCollectionEquality().equals(other._festivals, _festivals)&&const DeepCollectionEquality().equals(other._locations, _locations)&&(identical(other.selectedLocation, selectedLocation) || other.selectedLocation == selectedLocation));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HomeState&&const DeepCollectionEquality().equals(other._banners, _banners)&&const DeepCollectionEquality().equals(other._nowShowing, _nowShowing)&&const DeepCollectionEquality().equals(other._recommendedMovies, _recommendedMovies)&&const DeepCollectionEquality().equals(other._comingSoon, _comingSoon)&&const DeepCollectionEquality().equals(other._promotions, _promotions)&&const DeepCollectionEquality().equals(other._news, _news)&&const DeepCollectionEquality().equals(other._festivals, _festivals)&&const DeepCollectionEquality().equals(other._locations, _locations)&&(identical(other.selectedLocation, selectedLocation) || other.selectedLocation == selectedLocation));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_banners),const DeepCollectionEquality().hash(_nowShowing),const DeepCollectionEquality().hash(_comingSoon),const DeepCollectionEquality().hash(_promotions),const DeepCollectionEquality().hash(_news),const DeepCollectionEquality().hash(_festivals),const DeepCollectionEquality().hash(_locations),selectedLocation);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_banners),const DeepCollectionEquality().hash(_nowShowing),const DeepCollectionEquality().hash(_recommendedMovies),const DeepCollectionEquality().hash(_comingSoon),const DeepCollectionEquality().hash(_promotions),const DeepCollectionEquality().hash(_news),const DeepCollectionEquality().hash(_festivals),const DeepCollectionEquality().hash(_locations),selectedLocation);
 
 @override
 String toString() {
-  return 'HomeState(banners: $banners, nowShowing: $nowShowing, comingSoon: $comingSoon, promotions: $promotions, news: $news, festivals: $festivals, locations: $locations, selectedLocation: $selectedLocation)';
+  return 'HomeState(banners: $banners, nowShowing: $nowShowing, recommendedMovies: $recommendedMovies, comingSoon: $comingSoon, promotions: $promotions, news: $news, festivals: $festivals, locations: $locations, selectedLocation: $selectedLocation)';
 }
 
 
@@ -297,7 +305,7 @@ abstract mixin class _$HomeStateCopyWith<$Res> implements $HomeStateCopyWith<$Re
   factory _$HomeStateCopyWith(_HomeState value, $Res Function(_HomeState) _then) = __$HomeStateCopyWithImpl;
 @override @useResult
 $Res call({
- List<HomeBanner> banners, List<Movie> nowShowing, List<Movie> comingSoon, List<Promotion> promotions, List<News> news, List<Festival> festivals, List<String> locations, String? selectedLocation
+ List<HomeBanner> banners, List<Movie> nowShowing, List<Movie> recommendedMovies, List<Movie> comingSoon, List<Promotion> promotions, List<News> news, List<Festival> festivals, List<String> locations, String? selectedLocation
 });
 
 
@@ -314,10 +322,11 @@ class __$HomeStateCopyWithImpl<$Res>
 
 /// Create a copy of HomeState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? banners = null,Object? nowShowing = null,Object? comingSoon = null,Object? promotions = null,Object? news = null,Object? festivals = null,Object? locations = null,Object? selectedLocation = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? banners = null,Object? nowShowing = null,Object? recommendedMovies = null,Object? comingSoon = null,Object? promotions = null,Object? news = null,Object? festivals = null,Object? locations = null,Object? selectedLocation = freezed,}) {
   return _then(_HomeState(
 banners: null == banners ? _self._banners : banners // ignore: cast_nullable_to_non_nullable
 as List<HomeBanner>,nowShowing: null == nowShowing ? _self._nowShowing : nowShowing // ignore: cast_nullable_to_non_nullable
+as List<Movie>,recommendedMovies: null == recommendedMovies ? _self._recommendedMovies : recommendedMovies // ignore: cast_nullable_to_non_nullable
 as List<Movie>,comingSoon: null == comingSoon ? _self._comingSoon : comingSoon // ignore: cast_nullable_to_non_nullable
 as List<Movie>,promotions: null == promotions ? _self._promotions : promotions // ignore: cast_nullable_to_non_nullable
 as List<Promotion>,news: null == news ? _self._news : news // ignore: cast_nullable_to_non_nullable
