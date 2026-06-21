@@ -18,7 +18,7 @@ Use `http://localhost:3000/api/v1` for Flutter Web and the host machine IP for a
 The code follows the [Flutter application architecture guide](https://docs.flutter.dev/app-architecture):
 
 - **Views and ViewModels:** pages render immutable state; Riverpod Notifiers/providers own UI logic and commands.
-- **Repositories:** repository interfaces are the source of truth exposed to ViewModels. Implementations map transport errors to domain `Failure` values.
+- **Repositories:** repository interfaces are the source of truth exposed to ViewModels. Implementations expose app entities and mapped `AppException` errors.
 - **Services:** API services and `DioClient` are stateless wrappers around REST endpoints.
 - **Optional domain layer:** entities and repository contracts remain independent from Flutter widgets.
 - **Unidirectional data flow:** UI events flow to ViewModels/repositories; immutable state flows back to Views.

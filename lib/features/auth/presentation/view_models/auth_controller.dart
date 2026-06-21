@@ -3,6 +3,7 @@ import 'package:mtbs_app/core/auth/auth_invalidation_notifier.dart';
 import 'package:mtbs_app/core/di/core_providers.dart';
 import 'package:mtbs_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:mtbs_app/features/auth/data/services/auth_api_service.dart';
+import 'package:mtbs_app/features/auth/data/services/social_auth_service.dart';
 import 'package:mtbs_app/features/auth/domain/entities/auth_user.dart';
 import 'package:mtbs_app/features/auth/domain/repositories/auth_repository.dart';
 
@@ -13,8 +14,14 @@ final authApiServiceProvider = Provider<AuthApiService>((ref) {
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryImpl(
     ref.watch(authApiServiceProvider),
+    ref.watch(socialAuthServiceProvider),
     ref.watch(sessionStoreProvider),
+    ref.watch(deviceIdStoreProvider),
   );
+});
+
+final socialAuthServiceProvider = Provider<SocialAuthService>((ref) {
+  return SocialAuthService();
 });
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, AuthUser?>(
@@ -46,6 +53,28 @@ class AuthController extends AsyncNotifier<AuthUser?> {
       () => _repository.login(email: email.trim(), password: password),
     );
     return !state.hasError;
+  }
+
+  Future<bool> loginWithGoogle() => _socialLogin(_repository.loginWithGoogle);
+
+  Future<bool> loginWithFacebook() =>
+      _socialLogin(_repository.loginWithFacebook);
+
+  Future<bool> _socialLogin(Future<AuthUser?> Function() authenticate) async {
+    final previousUser = _currentUser;
+    state = const AsyncLoading();
+    try {
+      final user = await authenticate();
+      if (user == null) {
+        state = AsyncData(previousUser);
+        return false;
+      }
+      state = AsyncData(user);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return false;
+    }
   }
 
   Future<bool> register({

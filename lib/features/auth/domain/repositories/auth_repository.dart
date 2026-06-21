@@ -2,6 +2,8 @@ import 'package:mtbs_app/features/auth/domain/entities/auth_user.dart';
 
 abstract interface class AuthRepository {
   Future<AuthUser> login({required String email, required String password});
+  Future<AuthUser?> loginWithGoogle();
+  Future<AuthUser?> loginWithFacebook();
   Future<void> register({
     required String firstName,
     required String lastName,

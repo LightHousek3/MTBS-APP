@@ -1,0 +1,6 @@
+// Public OAuth identifiers. Replace these values before running iOS.
+GOOGLE_IOS_CLIENT_ID=379529891325-361b0ueahpb25rquh8m3gfnqvvjot436.apps.googleusercontent.com
+GOOGLE_SERVER_CLIENT_ID=379529891325-bpn2ilofrgpp4bot396rvd48qr6flnmn.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID=com.googleusercontent.apps.379529891325-361b0ueahpb25rquh8m3gfnqvvjot436
+FACEBOOK_APP_ID=1574352557411986
+FACEBOOK_CLIENT_TOKEN=7c4b43de8d0b081a7bc1acc83de212eb

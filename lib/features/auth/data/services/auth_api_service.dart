@@ -10,10 +10,49 @@ class AuthApiService {
   Future<AuthSession> login({
     required String email,
     required String password,
+    required String deviceId,
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/auth/login',
-      data: <String, dynamic>{'email': email, 'password': password},
+      data: <String, dynamic>{
+        'email': email,
+        'password': password,
+        'deviceId': deviceId,
+      },
+    );
+    return ApiResponse<AuthSession>.fromJson(
+      response.data!,
+      (json) => AuthSession.fromJson(json! as Map<String, dynamic>),
+    ).data!;
+  }
+
+  Future<AuthSession> loginWithGoogle({
+    required String idToken,
+    required String deviceId,
+  }) {
+    return _socialLogin('/auth/google', <String, dynamic>{
+      'idToken': idToken,
+      'deviceId': deviceId,
+    });
+  }
+
+  Future<AuthSession> loginWithFacebook({
+    required String accessToken,
+    required String deviceId,
+  }) {
+    return _socialLogin('/auth/facebook', <String, dynamic>{
+      'accessToken': accessToken,
+      'deviceId': deviceId,
+    });
+  }
+
+  Future<AuthSession> _socialLogin(
+    String path,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      path,
+      data: payload,
     );
     return ApiResponse<AuthSession>.fromJson(
       response.data!,

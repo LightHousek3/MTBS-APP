@@ -1,21 +1,61 @@
 import 'package:mtbs_app/core/errors/app_exception.dart';
+import 'package:mtbs_app/core/storage/device_id_store.dart';
 import 'package:mtbs_app/core/storage/session_store.dart';
 import 'package:mtbs_app/features/auth/data/services/auth_api_service.dart';
+import 'package:mtbs_app/features/auth/data/services/social_auth_service.dart';
+import 'package:mtbs_app/features/auth/domain/entities/auth_session.dart';
 import 'package:mtbs_app/features/auth/domain/entities/auth_user.dart';
 import 'package:mtbs_app/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  const AuthRepositoryImpl(this._service, this._sessionStore);
+  const AuthRepositoryImpl(
+    this._service,
+    this._socialAuthService,
+    this._sessionStore,
+    this._deviceIdStore,
+  );
 
   final AuthApiService _service;
+  final SocialAuthService _socialAuthService;
   final SessionStore _sessionStore;
+  final DeviceIdStore _deviceIdStore;
 
   @override
   Future<AuthUser> login({
     required String email,
     required String password,
   }) async {
-    final session = await _service.login(email: email, password: password);
+    final session = await _service.login(
+      email: email,
+      password: password,
+      deviceId: await _deviceIdStore.getOrCreate(),
+    );
+    return _persistSession(session);
+  }
+
+  @override
+  Future<AuthUser?> loginWithGoogle() async {
+    final idToken = await _socialAuthService.getGoogleIdToken();
+    if (idToken == null) return null;
+    final session = await _service.loginWithGoogle(
+      idToken: idToken,
+      deviceId: await _deviceIdStore.getOrCreate(),
+    );
+    return _persistSession(session);
+  }
+
+  @override
+  Future<AuthUser?> loginWithFacebook() async {
+    final accessToken = await _socialAuthService.getFacebookAccessToken();
+    if (accessToken == null) return null;
+    final session = await _service.loginWithFacebook(
+      accessToken: accessToken,
+      deviceId: await _deviceIdStore.getOrCreate(),
+    );
+    return _persistSession(session);
+  }
+
+  Future<AuthUser> _persistSession(AuthSession session) async {
     await _sessionStore.saveTokens(
       accessToken: session.tokens.accessToken,
       refreshToken: session.tokens.refreshToken,
@@ -79,6 +119,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (refreshToken != null) await _service.logout(refreshToken);
     } finally {
       await _sessionStore.clear();
+      await _socialAuthService.signOut();
     }
   }
 }

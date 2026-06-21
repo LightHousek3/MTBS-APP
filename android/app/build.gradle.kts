@@ -14,6 +14,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
 android {
     namespace = "vn.mtbs.mtbs_app"
     compileSdk = flutter.compileSdkVersion
@@ -36,6 +42,22 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        resValue("string", "app_name", "FilmGo")
+        resValue(
+            "string",
+            "facebook_app_id",
+            localProperties.getProperty("facebook.appId", "0"),
+        )
+        resValue(
+            "string",
+            "facebook_client_token",
+            localProperties.getProperty("facebook.clientToken", "0"),
+        )
+        resValue(
+            "string",
+            "fb_login_protocol_scheme",
+            "fb${localProperties.getProperty("facebook.appId", "0")}",
+        )
     }
 
     signingConfigs {
