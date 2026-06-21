@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mtbs_app/app/router/app_route_paths.dart';
 import 'package:mtbs_app/core/widgets/app_hash_loader.dart';
 import 'package:mtbs_app/core/widgets/app_logo.dart';
-import 'package:mtbs_app/core/widgets/async_error_view.dart';
+import 'package:mtbs_app/core/widgets/app_snack_bar.dart';
 import 'package:mtbs_app/core/widgets/gradient_button.dart';
 import 'package:mtbs_app/features/auth/presentation/view_models/auth_controller.dart';
 
@@ -34,15 +34,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
-    ref.listen(authControllerProvider, (_, next) {
-      if (next.hasError) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage(next.error!))));
-      }
-    });
     return Scaffold(
-      appBar: AppBar(title: const Text('Đăng nhập')),
+      appBar: AppBar(
+        title: const Text('Đăng nhập'),
+        leading: IconButton(
+          tooltip: 'Quay lại',
+          onPressed: _goBack,
+          icon: const Icon(Icons.arrow_back),
+        ),
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -54,6 +54,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   const Center(child: AppLogo(width: 168, height: 68)),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Chạm một lần, mở màn trải nghiệm điện ảnh.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.white60),
+                  ),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _email,
@@ -161,7 +169,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final ok = await ref
         .read(authControllerProvider.notifier)
         .login(email: _email.text, password: _password.text);
-    if (ok && mounted) context.go(widget.redirect ?? AppRoutePaths.home);
+    if (!mounted) return;
+    if (ok) {
+      context.go(widget.redirect ?? AppRoutePaths.home);
+    } else {
+      _showCurrentError();
+    }
+  }
+
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutePaths.home);
+    }
   }
 
   Future<void> _socialLogin(_SocialProvider provider) async {
@@ -173,7 +194,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     };
     if (!mounted) return;
     setState(() => _activeSocialProvider = null);
-    if (ok) context.go(widget.redirect ?? AppRoutePaths.home);
+    if (ok) {
+      context.go(widget.redirect ?? AppRoutePaths.home);
+    } else {
+      _showCurrentError();
+    }
+  }
+
+  void _showCurrentError() {
+    final auth = ref.read(authControllerProvider);
+    if (auth.hasError) showAppErrorSnackBar(context, auth.error!);
   }
 }
 

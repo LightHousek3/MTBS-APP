@@ -7,18 +7,22 @@ class MovieRepositoryImpl implements MovieRepository {
   final MovieApiService _service;
 
   @override
-  Future<List<Movie>> getNowShowing({String? location, int limit = 20}) =>
-      _list('/movies/now-showing', <String, dynamic>{
-        'limit': limit,
-        if (location != null && location.isNotEmpty) 'location': location,
-      });
+  Future<List<Movie>> getNowShowing({String? location, int limit = 20}) {
+    final normalizedLocation = _normalizeLocation(location);
+    return _list('/movies/now-showing', <String, dynamic>{
+      'limit': limit,
+      'location': ?normalizedLocation,
+    });
+  }
 
   @override
-  Future<List<Movie>> getComingSoon({String? location, int limit = 20}) =>
-      _list('/movies/coming-soon', <String, dynamic>{
-        'limit': limit,
-        if (location != null && location.isNotEmpty) 'location': location,
-      });
+  Future<List<Movie>> getComingSoon({String? location, int limit = 20}) {
+    final normalizedLocation = _normalizeLocation(location);
+    return _list('/movies/coming-soon', <String, dynamic>{
+      'limit': limit,
+      'location': ?normalizedLocation,
+    });
+  }
 
   @override
   Future<List<Movie>> search(String keyword, {int limit = 30}) =>
@@ -33,4 +37,9 @@ class MovieRepositoryImpl implements MovieRepository {
 
   Future<List<Movie>> _list(String path, Map<String, dynamic> query) =>
       _service.getList(path, query: query);
+
+  String? _normalizeLocation(String? location) {
+    final normalized = location?.trim();
+    return normalized == null || normalized.isEmpty ? null : normalized;
+  }
 }

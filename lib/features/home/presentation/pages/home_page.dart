@@ -270,7 +270,7 @@ class _MovieShowcase extends StatelessWidget {
   );
 
   Future<void> _showLocationPicker(BuildContext context) async {
-    final selected = await showModalBottomSheet<String?>(
+    final selection = await showModalBottomSheet<_LocationSelection>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -280,21 +280,31 @@ class _MovieShowcase extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.public),
               title: const Text('Tất cả tỉnh thành'),
-              onTap: () => Navigator.of(context).pop(),
+              selected: selectedLocation == null,
+              onTap: () =>
+                  Navigator.of(context).pop(const _LocationSelection(null)),
             ),
             for (final location in locations)
               ListTile(
                 leading: const Icon(Icons.location_on_outlined),
                 title: Text(location),
                 selected: selectedLocation == location,
-                onTap: () => Navigator.of(context).pop(location),
+                onTap: () =>
+                    Navigator.of(context).pop(_LocationSelection(location)),
               ),
           ],
         ),
       ),
     );
-    onLocationSelected?.call(selected);
+    if (selection == null || selection.location == selectedLocation) return;
+    onLocationSelected?.call(selection.location);
   }
+}
+
+class _LocationSelection {
+  const _LocationSelection(this.location);
+
+  final String? location;
 }
 
 class _InfiniteMovieCarousel extends StatefulWidget {

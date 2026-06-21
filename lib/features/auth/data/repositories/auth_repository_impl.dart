@@ -110,7 +110,7 @@ class AuthRepositoryImpl implements AuthRepository {
       _service.resendVerification(email);
 
   @override
-  Future<void> forgotPassword(String email) => _service.forgotPassword(email);
+  Future<String> forgotPassword(String email) => _service.forgotPassword(email);
 
   @override
   Future<void> logout() async {

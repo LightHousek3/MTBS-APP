@@ -81,11 +81,15 @@ class AuthApiService {
     );
   }
 
-  Future<void> forgotPassword(String email) async {
-    await _client.post<Map<String, dynamic>>(
+  Future<String> forgotPassword(String email) async {
+    final response = await _client.post<Map<String, dynamic>>(
       '/auth/forgot-password',
       data: <String, dynamic>{'email': email},
     );
+    return ApiResponse<Object?>.fromJson(
+      response.data!,
+      (json) => json,
+    ).message;
   }
 
   Future<RefreshSession> refresh(String refreshToken) async {

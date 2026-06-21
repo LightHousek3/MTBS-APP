@@ -68,8 +68,30 @@ class HomeController extends AsyncNotifier<HomeState> {
   }
 
   Future<void> selectLocation(String? location) async {
+    final current = switch (state) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+    if (current == null) return;
+
+    final normalizedLocation = switch (location?.trim()) {
+      null || '' => null,
+      final value => value,
+    };
+    if (normalizedLocation == current.selectedLocation) return;
+
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _load(location: location));
+    state = await AsyncValue.guard(() async {
+      final movies = await Future.wait<List<Movie>>([
+        _movieRepository.getNowShowing(location: normalizedLocation),
+        _movieRepository.getComingSoon(location: normalizedLocation),
+      ]);
+      return current.copyWith(
+        nowShowing: movies[0],
+        comingSoon: movies[1],
+        selectedLocation: normalizedLocation,
+      );
+    });
   }
 
   Future<HomeState> _load({String? location}) async {

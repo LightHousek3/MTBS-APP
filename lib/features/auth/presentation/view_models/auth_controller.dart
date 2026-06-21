@@ -84,8 +84,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String password,
     required String gender,
     required String address,
-    int? age,
-    String? phone,
+    required int age,
+    required String phone,
   }) async {
     state = const AsyncLoading();
     try {
@@ -116,6 +116,32 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);
       return false;
+    }
+  }
+
+  Future<bool> resendVerification(String email) async {
+    final previousUser = _currentUser;
+    state = const AsyncLoading();
+    try {
+      await _repository.resendVerification(email.trim());
+      state = AsyncData(previousUser);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return false;
+    }
+  }
+
+  Future<String?> forgotPassword(String email) async {
+    final previousUser = _currentUser;
+    state = const AsyncLoading();
+    try {
+      final message = await _repository.forgotPassword(email.trim());
+      state = AsyncData(previousUser);
+      return message;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return null;
     }
   }
 
