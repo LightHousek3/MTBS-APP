@@ -37,6 +37,7 @@ abstract class HomeState with _$HomeState {
   const factory HomeState({
     @Default(<HomeBanner>[]) List<HomeBanner> banners,
     @Default(<Movie>[]) List<Movie> nowShowing,
+    @Default(<Movie>[]) List<Movie> recommendedMovies,
     @Default(<Movie>[]) List<Movie> comingSoon,
     @Default(<Promotion>[]) List<Promotion> promotions,
     @Default(<News>[]) List<News> news,
@@ -82,16 +83,32 @@ class HomeController extends AsyncNotifier<HomeState> {
       _festivalRepository.getFestivals(),
       _homeRepository.getTheaterLocations(),
     ]);
+    final comingSoon = results[2] as List<Movie>;
+    final recommendedMovies = await _getRecommendedMovies(
+      coldStartMovies: comingSoon,
+    );
 
     return HomeState(
       banners: results[0] as List<HomeBanner>,
       nowShowing: results[1] as List<Movie>,
-      comingSoon: results[2] as List<Movie>,
+      recommendedMovies: recommendedMovies,
+      comingSoon: comingSoon,
       promotions: results[3] as List<Promotion>,
       news: results[4] as List<News>,
       festivals: results[5] as List<Festival>,
       locations: results[6] as List<String>,
       selectedLocation: location,
     );
+  }
+
+  Future<List<Movie>> _getRecommendedMovies({
+    required List<Movie> coldStartMovies,
+  }) async {
+    try {
+      final recommendations = await _movieRepository.getRecommendations();
+      return recommendations.isEmpty ? coldStartMovies : recommendations;
+    } catch (_) {
+      return coldStartMovies;
+    }
   }
 }
