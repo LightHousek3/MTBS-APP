@@ -62,6 +62,13 @@ class HomePage extends ConsumerWidget {
                 ),
                 SliverToBoxAdapter(
                   child: _MovieShowcase(
+                    title: 'Đề Xuất Cho Bạn',
+                    movies: state.recommendedMovies,
+                    showLocationSelector: false,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: _MovieShowcase(
                     title: 'Sắp Chiếu',
                     movies: state.comingSoon,
                     showLocationSelector: false,
