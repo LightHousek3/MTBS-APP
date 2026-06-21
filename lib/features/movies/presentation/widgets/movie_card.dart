@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mtbs_app/app/router/app_route_paths.dart';
@@ -27,7 +29,9 @@ class MovieCard extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            '${movie.duration} phút  •  ${movie.ageRating}',
+            '${math.max(movie.duration, 0)} phút  •  ${movie.ageRating}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
