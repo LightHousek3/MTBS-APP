@@ -13,6 +13,8 @@ import 'package:mtbs_app/features/auth/presentation/view_models/auth_controller.
 import 'package:mtbs_app/features/home/presentation/pages/home_page.dart';
 import 'package:mtbs_app/features/movies/presentation/pages/movie_detail_page.dart';
 import 'package:mtbs_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:mtbs_app/features/redeem/presentation/pages/redeem_detail_page.dart';
+import 'package:mtbs_app/features/redeem/presentation/pages/redeem_list_page.dart';
 import 'package:mtbs_app/features/theaters/presentation/pages/theaters_page.dart';
 
 part 'app_router.g.dart';
@@ -37,6 +39,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: refreshNotifier,
     routes: <RouteBase>[
       ...$appRoutes,
+      GoRoute(
+        path: AppRoutePaths.redeems,
+        builder: (_, _) => const RedeemListPage(),
+      ),
+      GoRoute(
+        path: AppRoutePaths.redeemDetailPath,
+        builder: (_, state) => RedeemDetailPage(
+          redeemId: state.pathParameters['redeemId']!,
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: <StatefulShellBranch>[
@@ -155,4 +167,24 @@ class MovieDetailRoute extends GoRouteData with $MovieDetailRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       MovieDetailPage(movieId: movieId);
+}
+
+@TypedGoRoute<RedeemListRoute>(path: AppRoutePaths.redeems)
+class RedeemListRoute extends GoRouteData with $RedeemListRoute {
+  const RedeemListRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const RedeemListPage();
+}
+
+@TypedGoRoute<RedeemDetailRoute>(path: AppRoutePaths.redeemDetailPath)
+class RedeemDetailRoute extends GoRouteData with $RedeemDetailRoute {
+  const RedeemDetailRoute({required this.redeemId});
+
+  final String redeemId;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      RedeemDetailPage(redeemId: redeemId);
 }

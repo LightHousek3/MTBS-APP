@@ -12,6 +12,8 @@ List<RouteBase> get $appRoutes => [
   $verifyEmailRoute,
   $forgotPasswordRoute,
   $movieDetailRoute,
+  $redeemListRoute,
+  $redeemDetailRoute,
 ];
 
 RouteBase get $loginRoute =>
@@ -137,6 +139,59 @@ mixin $MovieDetailRoute on GoRouteData {
   @override
   String get location =>
       GoRouteData.$location('/movie/${Uri.encodeComponent(_self.movieId)}');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $redeemListRoute =>
+    GoRouteData.$route(path: '/redeems', factory: $RedeemListRoute._fromState);
+
+mixin $RedeemListRoute on GoRouteData {
+  static RedeemListRoute _fromState(GoRouterState state) =>
+      const RedeemListRoute();
+
+  @override
+  String get location => GoRouteData.$location('/redeems');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $redeemDetailRoute => GoRouteData.$route(
+  path: '/redeem/:redeemId',
+  factory: $RedeemDetailRoute._fromState,
+);
+
+mixin $RedeemDetailRoute on GoRouteData {
+  static RedeemDetailRoute _fromState(GoRouterState state) =>
+      RedeemDetailRoute(redeemId: state.pathParameters['redeemId']!);
+
+  RedeemDetailRoute get _self => this as RedeemDetailRoute;
+
+  @override
+  String get location =>
+      GoRouteData.$location('/redeem/${Uri.encodeComponent(_self.redeemId)}');
 
   @override
   void go(BuildContext context) => context.go(location);
