@@ -16,6 +16,7 @@ import 'package:mtbs_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:mtbs_app/features/redeem/presentation/pages/redeem_detail_page.dart';
 import 'package:mtbs_app/features/redeem/presentation/pages/redeem_list_page.dart';
 import 'package:mtbs_app/features/theaters/presentation/pages/theaters_page.dart';
+import 'package:mtbs_app/features/ticket_prices/presentation/pages/ticket_prices_page.dart';
 
 part 'app_router.g.dart';
 
@@ -72,11 +73,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutePaths.ticketPrices,
-                builder: (_, _) => const PlaceholderPage(
-                  title: 'Giá Vé',
-                  icon: Icons.local_activity,
-                  description: 'Bảng giá vé đang được chuẩn hóa.',
-                ),
+                builder: (_, _) => const TicketPricesPage(),
               ),
             ],
           ),
