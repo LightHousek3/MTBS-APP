@@ -14,21 +14,32 @@ import 'package:mtbs_app/features/showtimes/domain/entities/showtime.dart';
 import 'package:mtbs_app/features/showtimes/presentation/view_models/showtime_controller.dart';
 import 'package:mtbs_app/features/theaters/domain/entities/theater.dart';
 
-class MovieDetailPage extends ConsumerWidget {
+class MovieDetailPage extends ConsumerStatefulWidget {
   const MovieDetailPage({required this.movieId, super.key});
 
   final String movieId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final movie = ref.watch(movieDetailProvider(movieId));
+  ConsumerState<MovieDetailPage> createState() => _MovieDetailPageState();
+}
+
+class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
+  @override
+  void initState() {
+    super.initState();
+    ref.invalidate(movieDetailProvider(widget.movieId));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final movie = ref.watch(movieDetailProvider(widget.movieId));
 
     return Scaffold(
       body: movie.when(
         loading: () => const Center(child: AppHashLoader()),
         error: (error, _) => AsyncErrorView(
           error: error,
-          onRetry: () => ref.invalidate(movieDetailProvider(movieId)),
+          onRetry: () => ref.invalidate(movieDetailProvider(widget.movieId)),
         ),
         data: (item) => _MovieDetailContent(movie: item),
       ),
@@ -299,6 +310,9 @@ class _MovieShowtimesTabState extends ConsumerState<_MovieShowtimesTab> {
     super.initState();
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
+    ref.invalidate(
+      movieShowtimesProvider((movieId: widget.movieId, date: _selectedDate)),
+    );
   }
 
   @override
@@ -318,6 +332,9 @@ class _MovieShowtimesTabState extends ConsumerState<_MovieShowtimesTab> {
                 _selectedDate = date;
                 _selectedTheaterId = null;
               });
+              ref.invalidate(
+                movieShowtimesProvider((movieId: widget.movieId, date: date)),
+              );
             },
           ),
           const SizedBox(height: 16),

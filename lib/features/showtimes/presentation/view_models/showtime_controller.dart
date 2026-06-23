@@ -4,8 +4,8 @@ import 'package:mtbs_app/features/showtimes/domain/entities/showtime.dart';
 
 typedef ShowtimeQuery = ({String movieId, DateTime date});
 
-final movieShowtimesProvider =
-    FutureProvider.family<List<Showtime>, ShowtimeQuery>((ref, query) {
+final movieShowtimesProvider = FutureProvider.autoDispose
+    .family<List<Showtime>, ShowtimeQuery>((ref, query) {
       return ref
           .watch(showtimeApiServiceProvider)
           .getByMovieDate(movieId: query.movieId, date: query.date);
