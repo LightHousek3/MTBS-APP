@@ -14,7 +14,10 @@ final recommendationProvider = FutureProvider<List<Movie>>((ref) {
   return ref.watch(movieRepositoryProvider).getRecommendations();
 });
 
-final movieDetailProvider = FutureProvider.family<Movie, String>((ref, id) {
+final movieDetailProvider = FutureProvider.autoDispose.family<Movie, String>((
+  ref,
+  id,
+) {
   return ref.watch(movieRepositoryProvider).getById(id);
 });
 

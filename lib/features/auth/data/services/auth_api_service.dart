@@ -1,6 +1,7 @@
 import 'package:mtbs_app/core/network/api_response.dart';
 import 'package:mtbs_app/core/network/dio_client.dart';
 import 'package:mtbs_app/features/auth/domain/entities/auth_session.dart';
+import 'package:mtbs_app/features/auth/domain/entities/auth_user.dart';
 
 class AuthApiService {
   const AuthApiService(this._client);
@@ -100,6 +101,14 @@ class AuthApiService {
     return ApiResponse<RefreshSession>.fromJson(
       response.data!,
       (json) => RefreshSession.fromJson(json! as Map<String, dynamic>),
+    ).data!;
+  }
+
+  Future<AuthUser> getMe() async {
+    final response = await _client.get<Map<String, dynamic>>('/auth/me');
+    return ApiResponse<AuthUser>.fromJson(
+      response.data!,
+      (json) => AuthUser.fromJson(json! as Map<String, dynamic>),
     ).data!;
   }
 
