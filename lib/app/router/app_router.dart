@@ -16,8 +16,11 @@ import 'package:mtbs_app/features/booking/presentation/pages/service_selection_p
 import 'package:mtbs_app/features/home/presentation/pages/home_page.dart';
 import 'package:mtbs_app/features/movies/presentation/pages/movie_detail_page.dart';
 import 'package:mtbs_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:mtbs_app/features/redeem/presentation/pages/redeem_detail_page.dart';
+import 'package:mtbs_app/features/redeem/presentation/pages/redeem_list_page.dart';
 import 'package:mtbs_app/features/showtimes/presentation/pages/theater_showtimes_page.dart';
 import 'package:mtbs_app/features/theaters/presentation/pages/theaters_page.dart';
+import 'package:mtbs_app/features/ticket_prices/presentation/pages/ticket_prices_page.dart';
 
 part 'app_router.g.dart';
 
@@ -72,6 +75,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return id == null ? AppRoutePaths.home : AppRoutePaths.payment(id);
         },
       ),
+      GoRoute(
+        path: AppRoutePaths.redeems,
+        builder: (_, _) => const RedeemListPage(),
+      ),
+      GoRoute(
+        path: AppRoutePaths.redeemDetailPath,
+        builder: (_, state) =>
+            RedeemDetailPage(redeemId: state.pathParameters['redeemId']!),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: <StatefulShellBranch>[
@@ -95,11 +107,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutePaths.ticketPrices,
-                builder: (_, _) => const PlaceholderPage(
-                  title: 'Giá Vé',
-                  icon: Icons.local_activity,
-                  description: 'Bảng giá vé đang được chuẩn hóa.',
-                ),
+                builder: (_, _) => const TicketPricesPage(),
               ),
             ],
           ),
@@ -190,4 +198,24 @@ class MovieDetailRoute extends GoRouteData with $MovieDetailRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       MovieDetailPage(movieId: movieId);
+}
+
+@TypedGoRoute<RedeemListRoute>(path: AppRoutePaths.redeems)
+class RedeemListRoute extends GoRouteData with $RedeemListRoute {
+  const RedeemListRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const RedeemListPage();
+}
+
+@TypedGoRoute<RedeemDetailRoute>(path: AppRoutePaths.redeemDetailPath)
+class RedeemDetailRoute extends GoRouteData with $RedeemDetailRoute {
+  const RedeemDetailRoute({required this.redeemId});
+
+  final String redeemId;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      RedeemDetailPage(redeemId: redeemId);
 }

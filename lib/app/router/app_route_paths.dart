@@ -15,6 +15,8 @@ abstract final class AppRoutePaths {
   static const serviceSelection = '/booking/services';
   static const paymentRoute = '/payment/:bookingId';
   static const paymentResult = '/payment-result';
+  static const redeems = '/redeems';
+  static const redeemDetailPath = '/redeem/:redeemId';
 
   static String movie(String movieId) => '/movie/$movieId';
   static String showtimesAt(String theaterId) =>
@@ -22,6 +24,7 @@ abstract final class AppRoutePaths {
   static String seats(String showtimeId) => '/booking/seats/$showtimeId';
   static String payment(String bookingId) => '/payment/$bookingId';
   static const services = serviceSelection;
+  static String redeemDetail(String redeemId) => '/redeem/$redeemId';
   static String loginFrom(String from) =>
       '$login?from=${Uri.encodeComponent(from)}';
   static String verifyEmailFor(String email) =>
