@@ -200,63 +200,83 @@ class Booking {
     required this.seats,
     required this.services,
     required this.status,
-    required this.seatTotal,
-    required this.seatFinalTotal,
-    required this.serviceTotal,
-    required this.serviceFinalTotal,
-    required this.discount,
+    required this.totalPriceMovie,
+    required this.totalPriceService,
+    required this.pointsUsed,
+    required this.pointsEarned,
     required this.totalPrice,
     required this.createdAt,
     required this.expiresAt,
+    this.qrCode,
   });
   final String id;
   final BookingShowtime showtime;
   final List<BookingSeatLine> seats;
   final List<BookingServiceLine> services;
   final String status;
-  final double seatTotal;
-  final double seatFinalTotal;
-  final double serviceTotal;
-  final double serviceFinalTotal;
-  final double discount;
+  final double totalPriceMovie;
+  final double totalPriceService;
+  final int pointsUsed;
+  final int pointsEarned;
   final double totalPrice;
   final DateTime createdAt;
   final DateTime expiresAt;
+  final String? qrCode;
   bool get isPending =>
       status == 'PENDING' && expiresAt.isAfter(DateTime.now());
 
-  factory Booking.fromJson(Map<String, dynamic> json) => Booking(
-    id: _id(json),
-    showtime: BookingShowtime.fromJson(_map(json['showtime'])),
-    seats: _list(
+  factory Booking.fromJson(Map<String, dynamic> json) {
+    final seats = _list(
       json['seats'],
-    ).map((item) => BookingSeatLine.fromJson(_map(item))).toList(),
-    services: _list(
+    ).map((item) => BookingSeatLine.fromJson(_map(item))).toList();
+    final services = _list(
       json['services'],
-    ).map((item) => BookingServiceLine.fromJson(_map(item))).toList(),
-    status: _string(json['status']),
-    seatTotal: _double(json['seatTotal']),
-    seatFinalTotal: _double(
-      json['seatFinalTotal'] ??
-          (_double(json['seatTotal']) - _double(json['seatDiscount'])),
-    ),
-    serviceTotal: _double(json['serviceTotal']),
-    serviceFinalTotal: _double(
-      json['serviceFinalTotal'] ??
-          (_double(json['serviceTotal']) - _double(json['serviceDiscount'])),
-    ),
-    discount: _double(json['promotionDiscount']),
-    totalPrice: _double(json['totalPrice']),
-    createdAt:
-        DateTime.tryParse(_string(json['createdAt']))?.toLocal() ??
-        DateTime.now(),
-    expiresAt:
-        DateTime.tryParse(_string(json['expiresAt']))?.toLocal() ??
-        DateTime.now(),
-  );
+    ).map((item) => BookingServiceLine.fromJson(_map(item))).toList();
+    final movieTotal = _double(json['totalPriceMovie']);
+    final serviceAmount = _double(json['totalPriceService']);
+    final pointsUsed = (json['pointsUsed'] as num?)?.toInt() ?? 0;
+    return Booking(
+      id: _id(json),
+      showtime: BookingShowtime.fromJson(_map(json['showtime'])),
+      seats: seats,
+      services: services,
+      status: _string(json['status']),
+      totalPriceMovie: movieTotal == 0 && seats.isNotEmpty
+          ? seats.fold<double>(0, (sum, seat) => sum + seat.finalPrice)
+          : movieTotal,
+      totalPriceService: serviceAmount == 0 && services.isNotEmpty
+          ? services.fold<double>(0, (sum, service) => sum + service.finalTotal)
+          : serviceAmount,
+      pointsUsed: pointsUsed,
+      pointsEarned: (json['pointsEarned'] as num?)?.toInt() ?? 0,
+      totalPrice: _double(json['totalPrice']),
+      qrCode: json['qrCode']?.toString(),
+      createdAt:
+          DateTime.tryParse(_string(json['createdAt']))?.toLocal() ??
+          DateTime.now(),
+      expiresAt:
+          DateTime.tryParse(_string(json['expiresAt']))?.toLocal() ??
+          DateTime.now(),
+    );
+  }
 
   List<String> get seatNumbers => seats.map((seat) => seat.number).toList();
-  double get baseTotal => seatTotal + serviceTotal;
+  double get movieBaseTotal =>
+      seats.fold<double>(0, (sum, seat) => sum + seat.basePrice);
+  double get serviceBaseTotal =>
+      services.fold<double>(0, (sum, service) => sum + service.baseTotal);
+  double get baseTotal => movieBaseTotal + serviceBaseTotal;
+  double get ticketFinalTotal => totalPriceMovie > 0
+      ? totalPriceMovie
+      : seats.fold<double>(0, (sum, seat) => sum + seat.finalPrice);
+  double get concessionFinalTotal => totalPriceService > 0
+      ? totalPriceService
+      : services.fold<double>(0, (sum, service) => sum + service.finalTotal);
+  double get payableTotal {
+    if (totalPrice > 0) return totalPrice;
+    final total = ticketFinalTotal + concessionFinalTotal - pointsUsed;
+    return total < 0 ? 0 : total;
+  }
 }
 
 class BookingSeatLine {
@@ -280,20 +300,32 @@ class BookingServiceLine {
   const BookingServiceLine({
     required this.name,
     required this.quantity,
+    required this.unitPrice,
     required this.baseTotal,
     required this.finalTotal,
   });
   final String name;
   final int quantity;
+  final double unitPrice;
   final double baseTotal;
   final double finalTotal;
-  factory BookingServiceLine.fromJson(Map<String, dynamic> json) =>
-      BookingServiceLine(
-        name: _string(_map(json['service'])['name']),
-        quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-        baseTotal: _double(json['total']),
-        finalTotal: _double(json['finalTotal'] ?? json['total']),
-      );
+  factory BookingServiceLine.fromJson(Map<String, dynamic> json) {
+    final quantity = (json['quantity'] as num?)?.toInt() ?? 0;
+    final unitPrice = _double(
+      json['unitPrice'] ?? _map(json['service'])['price'],
+    );
+    final baseTotal = _double(json['total']);
+    return BookingServiceLine(
+      name: _string(_map(json['service'])['name']),
+      quantity: quantity,
+      unitPrice: unitPrice,
+      baseTotal: baseTotal > 0 ? baseTotal : unitPrice * quantity,
+      finalTotal: _double(
+        json['finalTotal'] ??
+            (baseTotal > 0 ? baseTotal : unitPrice * quantity),
+      ),
+    );
+  }
 }
 
 class BookingDraft {
@@ -301,7 +333,7 @@ class BookingDraft {
   final SeatingData seating;
   final List<CinemaSeat> selectedSeats;
   PriceSummary get seatPricing => seating.priceForSeats(selectedSeats);
-  double get seatTotal => seatPricing.finalPrice;
+  double get ticketTotal => seatPricing.finalPrice;
 }
 
 Map<String, dynamic> _map(Object? value) =>

@@ -120,11 +120,13 @@ class _ServiceSelectionPageState extends ConsumerState<ServiceSelectionPage>
                         ),
                         services.maybeWhen(
                           data: (items) => Text(
-                            _money(draft.seatTotal + _serviceTotal(items)),
+                            _money(
+                              draft.ticketTotal + _concessionAmount(items),
+                            ),
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w900),
                           ),
-                          orElse: () => Text(_money(draft.seatTotal)),
+                          orElse: () => Text(_money(draft.ticketTotal)),
                         ),
                       ],
                     ),
@@ -146,7 +148,7 @@ class _ServiceSelectionPageState extends ConsumerState<ServiceSelectionPage>
     );
   }
 
-  double _serviceTotal(List<CinemaService> items) => items.fold(
+  double _concessionAmount(List<CinemaService> items) => items.fold(
     0,
     (sum, item) => sum + item.price * (_quantities[item.id] ?? 0),
   );

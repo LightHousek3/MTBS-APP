@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -149,8 +150,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 ),
               _priceLine(
                 'Tổng giá vé',
-                basePrice: booking.seatTotal,
-                finalPrice: booking.seatFinalTotal,
+                basePrice: booking.movieBaseTotal,
+                finalPrice: booking.ticketFinalTotal,
                 strong: true,
               ),
               const Divider(height: 26),
@@ -169,24 +170,41 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 )
               else
                 for (final service in booking.services)
-                  _priceLine(
-                    '${service.name} × ${service.quantity}',
-                    basePrice: service.baseTotal,
-                    finalPrice: service.finalTotal,
-                  ),
+                  _ServicePriceLine(service: service),
               _priceLine(
                 'Tổng giá dịch vụ',
-                basePrice: booking.serviceTotal,
-                finalPrice: booking.serviceFinalTotal,
+                basePrice: booking.serviceBaseTotal,
+                finalPrice: booking.concessionFinalTotal,
                 strong: true,
               ),
+              if (booking.pointsUsed > 0)
+                _plainLine('Điểm đã dùng', '-${booking.pointsUsed} điểm'),
               const Divider(height: 28),
               _priceLine(
                 'Tổng cộng',
                 basePrice: booking.baseTotal,
-                finalPrice: booking.totalPrice,
+                finalPrice: booking.payableTotal,
                 strong: true,
               ),
+              if (booking.pointsEarned > 0)
+                _plainLine('Điểm nhận được', '+${booking.pointsEarned} điểm'),
+              if (booking.status == 'CONFIRMED' &&
+                  booking.qrCode?.isNotEmpty == true) ...<Widget>[
+                const Divider(height: 30),
+                Center(
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        'Mã QR vé',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 10),
+                      _BookingQrCode(dataUri: booking.qrCode!),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -253,6 +271,18 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             color: finalPrice < basePrice ? const Color(0xFFFF7777) : null,
           ),
         ),
+      ],
+    ),
+  );
+
+  Widget _plainLine(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(label, style: const TextStyle(color: Colors.white60)),
+        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
     ),
   );
@@ -387,6 +417,88 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     } catch (error) {
       if (mounted) showAppErrorSnackBar(context, error);
     }
+  }
+}
+
+class _ServicePriceLine extends StatelessWidget {
+  const _ServicePriceLine({required this.service});
+  final BookingServiceLine service;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                '${service.name} × ${service.quantity}',
+                style: const TextStyle(color: Colors.white60),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Đơn giá: ${_money(service.unitPrice)}',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        if (service.finalTotal < service.baseTotal) ...<Widget>[
+          Text(
+            _money(service.baseTotal),
+            style: const TextStyle(
+              color: Colors.white54,
+              decoration: TextDecoration.lineThrough,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Text(
+          _money(service.finalTotal),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: service.finalTotal < service.baseTotal
+                ? const Color(0xFFFF7777)
+                : null,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _BookingQrCode extends StatelessWidget {
+  const _BookingQrCode({required this.dataUri});
+  final String dataUri;
+
+  @override
+  Widget build(BuildContext context) {
+    final commaIndex = dataUri.indexOf(',');
+    if (!dataUri.startsWith('data:image') || commaIndex == -1) {
+      return SelectableText(
+        dataUri,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.white70),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Image.memory(
+        base64Decode(dataUri.substring(commaIndex + 1)),
+        width: 180,
+        height: 180,
+        fit: BoxFit.contain,
+      ),
+    );
   }
 }
 
