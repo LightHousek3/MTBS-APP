@@ -21,6 +21,15 @@ class RedeemDetailPage extends ConsumerStatefulWidget {
 class _RedeemDetailPageState extends ConsumerState<RedeemDetailPage> {
   bool _isRedeeming = false;
 
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(() {
+      if (!mounted) return;
+      ref.invalidate(redeemDetailProvider(widget.redeemId));
+    });
+  }
+
   Future<void> _handleRedeem(Redeem redeem) async {
     final user = switch (ref.read(authControllerProvider)) {
       AsyncData(:final value) => value,
@@ -61,20 +70,22 @@ class _RedeemDetailPageState extends ConsumerState<RedeemDetailPage> {
 
     setState(() => _isRedeeming = true);
     try {
-      await ref.read(redeemRepositoryProvider).redeemGift(
+      await ref
+          .read(redeemRepositoryProvider)
+          .redeemGift(
             redeemId: widget.redeemId,
             address: address,
             phone: phone,
           );
       if (!mounted) return;
-      ref.invalidate(redeemDetailProvider(widget.redeemId));
+      ref.invalidate(redeemGiftHistoryProvider);
+      final _ = await ref.refresh(redeemDetailProvider(widget.redeemId).future);
       ref.invalidate(redeemListProvider);
-      ref.invalidate(authControllerProvider);
+      await ref.read(authControllerProvider.notifier).refreshUser();
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Đổi quà thành công!')),
-        );
+        ..showSnackBar(const SnackBar(content: Text('Đổi quà thành công!')));
     } catch (error) {
       if (!mounted) return;
       showAppErrorSnackBar(context, error);
@@ -105,7 +116,8 @@ class _RedeemDetailPageState extends ConsumerState<RedeemDetailPage> {
         ),
         data: (redeem) {
           final isOutOfStock = redeem.quantity <= 0;
-          final hasEnoughPoints = user != null && user.loyaltyPoints >= redeem.pointsRequired;
+          final hasEnoughPoints =
+              user != null && user.loyaltyPoints >= redeem.pointsRequired;
 
           return Scaffold(
             body: NestedScrollView(
@@ -225,7 +237,7 @@ class _RedeemDetailPageState extends ConsumerState<RedeemDetailPage> {
                               _RuleItem(
                                 icon: Icons.local_shipping_outlined,
                                 text:
-                                    'Hệ thống sẽ liên hệ để xác nhận và giao quà trong vòng 3-5 ngày làm việc.',
+                                    'Hệ thống sẽ liên hệ để xác nhận và giao quà trong vòng 14 ngày làm việc.',
                               ),
                             ],
                           ),
@@ -241,9 +253,7 @@ class _RedeemDetailPageState extends ConsumerState<RedeemDetailPage> {
               decoration: BoxDecoration(
                 color: const Color(0xFF111318),
                 border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.06),
-                  ),
+                  top: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
                 ),
               ),
               child: GradientButton(
@@ -252,8 +262,8 @@ class _RedeemDetailPageState extends ConsumerState<RedeemDetailPage> {
                 onPressed: isOutOfStock
                     ? null
                     : (user != null && !hasEnoughPoints)
-                        ? null
-                        : () => _handleRedeem(redeem),
+                    ? null
+                    : () => _handleRedeem(redeem),
               ),
             ),
           );
@@ -370,16 +380,16 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Chip(
-        avatar: Icon(icon, size: 16, color: iconColor),
-        label: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-        ),
-        visualDensity: VisualDensity.compact,
-        backgroundColor: const Color(0xFF16181E),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      );
+    avatar: Icon(icon, size: 16, color: iconColor),
+    label: Text(
+      label,
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+    ),
+    visualDensity: VisualDensity.compact,
+    backgroundColor: const Color(0xFF16181E),
+    side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  );
 }
 
 class _Section extends StatelessWidget {
@@ -390,19 +400,18 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+      ),
+      const SizedBox(height: 10),
+      child,
+    ],
+  );
 }
 
 class _RuleItem extends StatelessWidget {
@@ -416,19 +425,15 @@ class _RuleItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Icon(
-          icon,
-          size: 16,
-          color: Colors.white.withValues(alpha: 0.5),
-        ),
+        Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.5)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  height: 1.3,
-                ),
+              color: Colors.white.withValues(alpha: 0.7),
+              height: 1.3,
+            ),
           ),
         ),
       ],
@@ -484,8 +489,9 @@ class _RedeemConfirmDialogState extends State<_RedeemConfirmDialog> {
             children: <Widget>[
               Text(
                 'Bạn đang đổi ${widget.redeem.pointsRequired} điểm để nhận "${widget.redeem.name}". Vui lòng xác nhận thông tin giao hàng.',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: Colors.white.withValues(alpha: 0.7)),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
               ),
               const SizedBox(height: 18),
               TextFormField(
