@@ -10,7 +10,7 @@ class FestivalRepositoryImpl implements FestivalRepository {
       Festival(
         id: 'family-film-week',
         title: 'Festival',
-        subtitle: 'Tuần lễ phim gia đình tại FilmGo',
+        subtitle: 'Tuần lễ phim gia đình tại MTBS',
       ),
       Festival(
         id: 'movie-weekend',

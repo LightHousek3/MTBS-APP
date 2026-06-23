@@ -44,6 +44,9 @@ class DioClient {
   Future<Response<T>> patch<T>(String path, {Object? data}) =>
       _guard(() => _dio.patch<T>(path, data: data));
 
+  Future<Response<T>> delete<T>(String path, {Object? data}) =>
+      _guard(() => _dio.delete<T>(path, data: data));
+
   Future<T> _guard<T>(Future<T> Function() request) async {
     try {
       return await request();

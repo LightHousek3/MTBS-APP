@@ -26,7 +26,7 @@ class AppLogo extends StatelessWidget {
       width: width,
       height: height,
       child: const Center(
-        child: Text('FilmGo', style: TextStyle(fontWeight: FontWeight.w900)),
+        child: Text('MTBS', style: TextStyle(fontWeight: FontWeight.w900)),
       ),
     ),
   );

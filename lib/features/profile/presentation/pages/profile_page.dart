@@ -12,6 +12,9 @@ import 'package:mtbs_app/features/auth/presentation/view_models/auth_controller.
 import 'package:mtbs_app/features/redeem/data/redeem_data_providers.dart';
 import 'package:mtbs_app/features/redeem/domain/entities/redeem_gift.dart';
 import 'package:mtbs_app/features/redeem/presentation/view_models/redeem_controller.dart';
+import 'package:mtbs_app/features/waitlist/data/waitlist_data_providers.dart';
+import 'package:mtbs_app/features/waitlist/domain/entities/waitlist_item.dart';
+import 'package:mtbs_app/features/waitlist/presentation/view_models/waitlist_controller.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -24,6 +27,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   int _selectedTab = 0;
   String _historyStatus = 'ALL';
   final Set<String> _cancelling = <String>{};
+  final Set<String> _removingWaitlistMovies = <String>{};
 
   Future<void> _refreshVisibleData() async {
     await ref.read(authControllerProvider.notifier).refreshUser();
@@ -31,6 +35,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       final _ = await ref.refresh(
         redeemGiftHistoryProvider(_historyStatus).future,
       );
+    } else if (_selectedTab == 3) {
+      final _ = await ref.refresh(waitlistProvider.future);
     }
   }
 
@@ -81,6 +87,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  Future<void> _removeWaitlistMovie(WaitlistItem item) async {
+    final movieId = item.movie.id;
+    setState(() => _removingWaitlistMovies.add(movieId));
+    try {
+      await ref.read(waitlistRepositoryProvider).removeMovie(movieId);
+      ref
+        ..invalidate(waitlistProvider)
+        ..invalidate(waitlistStatusProvider(movieId));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Đã xoá ${item.movie.title} khỏi danh sách chờ.'),
+          ),
+        );
+    } catch (error) {
+      if (mounted) showAppErrorSnackBar(context, error);
+    } finally {
+      if (mounted) setState(() => _removingWaitlistMovies.remove(movieId));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -110,6 +139,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ref.invalidate(
                             redeemGiftHistoryProvider(_historyStatus),
                           );
+                        } else if (index == 3) {
+                          ref.invalidate(waitlistProvider);
                         }
                       },
                     ),
@@ -137,14 +168,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         },
                         onCancel: _cancelGift,
                       ),
+                    ] else if (_selectedTab == 3) ...[
+                      _WaitlistSection(
+                        removingMovieIds: _removingWaitlistMovies,
+                        onRemove: _removeWaitlistMovie,
+                      ),
                     ] else ...[
                       _ComingSoonSection(
-                        icon: _selectedTab == 1
-                            ? Icons.confirmation_number_outlined
-                            : Icons.favorite_border_rounded,
-                        title: _selectedTab == 1
-                            ? 'Lịch sử vé'
-                            : 'Phim yêu thích',
+                        icon: Icons.confirmation_number_outlined,
+                        title: 'Lịch sử vé',
                       ),
                     ],
                     if (authState.hasError) ...[
@@ -176,7 +208,7 @@ class _ProfileHeader extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final name = user?.fullName.isNotEmpty == true
         ? user!.fullName
-        : 'Khách hàng FilmGo';
+        : 'Khách hàng MTBS';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -215,7 +247,7 @@ class _ProfileHeader extends StatelessWidget {
                 Text(
                   user == null
                       ? 'Thông tin tài khoản sẽ được hoàn thiện sau.'
-                      : 'Thành viên FilmGo',
+                      : 'Thành viên MTBS',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -268,7 +300,12 @@ class _ProfileTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = <String>['Thông tin', 'Ls. vé', 'Ls. đổi quà', 'Yêu thích'];
+    const labels = <String>[
+      'Thông tin',
+      'Ls. vé',
+      'Ls. đổi quà',
+      'Danh sách chờ',
+    ];
 
     return SizedBox(
       height: 42,
@@ -666,6 +703,246 @@ class _StatusPill extends StatelessWidget {
   };
 }
 
+class _WaitlistSection extends ConsumerWidget {
+  const _WaitlistSection({
+    required this.removingMovieIds,
+    required this.onRemove,
+  });
+
+  final Set<String> removingMovieIds;
+  final ValueChanged<WaitlistItem> onRemove;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final waitlist = ref.watch(waitlistProvider);
+
+    return waitlist.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: AppHashLoader()),
+      ),
+      error: (error, _) => AsyncErrorView(
+        error: error,
+        onRetry: () => ref.invalidate(waitlistProvider),
+      ),
+      data: (items) {
+        if (items.isEmpty) {
+          return const _EmptyWaitlist();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: items
+              .map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _WaitlistMovieCard(
+                    item: item,
+                    isRemoving: removingMovieIds.contains(item.movie.id),
+                    onRemove: () => onRemove(item),
+                  ),
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
+    );
+  }
+}
+
+class _EmptyWaitlist extends StatelessWidget {
+  const _EmptyWaitlist();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 36),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Column(
+        children: <Widget>[
+          Icon(
+            Icons.bookmark_border_rounded,
+            size: 42,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Chưa có phim trong danh sách chờ',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Các phim sắp chiếu bạn lưu sẽ xuất hiện tại đây.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WaitlistMovieCard extends StatelessWidget {
+  const _WaitlistMovieCard({
+    required this.item,
+    required this.isRemoving,
+    required this.onRemove,
+  });
+
+  final WaitlistItem item;
+  final bool isRemoving;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final movie = item.movie;
+    final genres = movie.genres
+        .map((genre) => genre.name)
+        .where((name) => name.trim().isNotEmpty)
+        .take(2)
+        .join(' • ');
+
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(AppRoutePaths.movie(movie.id)),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              SizedBox(
+                width: 76,
+                height: 108,
+                child: NetworkImageCard(
+                  imageUrl: movie.image?.url,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      movie.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _MovieMetaLine(
+                      icon: Icons.event_available_outlined,
+                      label: _formatWaitlistDate(movie.releaseDate),
+                    ),
+                    const SizedBox(height: 4),
+                    _MovieMetaLine(
+                      icon: Icons.schedule_rounded,
+                      label: movie.duration > 0
+                          ? '${movie.duration} phút • ${movie.ageRating}'
+                          : movie.ageRating,
+                    ),
+                    if (genres.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _MovieMetaLine(
+                        icon: Icons.local_movies_outlined,
+                        label: genres,
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        height: 34,
+                        child: OutlinedButton.icon(
+                          onPressed: isRemoving ? null : onRemove,
+                          icon: isRemoving
+                              ? const SizedBox.square(
+                                  dimension: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.bookmark_remove_outlined,
+                                  size: 18,
+                                ),
+                          label: const Text('Xoá'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _formatWaitlistDate(DateTime? value) {
+    if (value == null) return 'Chưa cập nhật ngày chiếu';
+    return 'Khởi chiếu ${DateFormat('dd/MM/yyyy').format(value)}';
+  }
+}
+
+class _MovieMetaLine extends StatelessWidget {
+  const _MovieMetaLine({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+
+    return Row(
+      children: <Widget>[
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ComingSoonSection extends StatelessWidget {
   const _ComingSoonSection({required this.icon, required this.title});
 
@@ -722,7 +999,6 @@ class _ActionSection extends StatelessWidget {
       title: 'Tiện ích tài khoản',
       children: <Widget>[
         const _MenuRow(icon: Icons.settings_outlined, title: 'Cài đặt'),
-        const _MenuRow(icon: Icons.history_rounded, title: 'Yêu cầu hoàn tiền'),
         _MenuRow(
           icon: Icons.card_giftcard_outlined,
           title: 'Đổi quà thân thiết',
