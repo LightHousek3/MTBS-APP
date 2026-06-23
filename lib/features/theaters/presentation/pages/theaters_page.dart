@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mtbs_app/app/router/app_route_paths.dart';
 import 'package:mtbs_app/core/widgets/app_hash_loader.dart';
 import 'package:mtbs_app/core/widgets/async_error_view.dart';
 import 'package:mtbs_app/core/widgets/gradient_button.dart';
@@ -11,10 +14,7 @@ class TheatersPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locator = ref.watch(theaterLocatorControllerProvider);
-    final current = switch (locator) {
-      AsyncData(:final value) => value,
-      _ => const TheaterLocatorState(),
-    };
+    final current = locator.value ?? const TheaterLocatorState();
 
     return Scaffold(
       appBar: AppBar(title: Text('Tìm rạp')),
@@ -53,13 +53,44 @@ class TheatersPage extends ConsumerWidget {
   }
 }
 
-class _RadiusSearchBar extends ConsumerWidget {
+class _RadiusSearchBar extends ConsumerStatefulWidget {
   const _RadiusSearchBar({required this.state});
 
   final TheaterLocatorState state;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Row(
+  ConsumerState<_RadiusSearchBar> createState() => _RadiusSearchBarState();
+}
+
+class _RadiusSearchBarState extends ConsumerState<_RadiusSearchBar> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: '${widget.state.radiusKm}');
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RadiusSearchBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_focusNode.hasFocus &&
+        oldWidget.state.radiusKm != widget.state.radiusKm) {
+      _controller.text = '${widget.state.radiusKm}';
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
     children: <Widget>[
       Expanded(
         child: Container(
@@ -70,24 +101,25 @@ class _RadiusSearchBar extends ConsumerWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: Colors.white24),
           ),
-          child: Row(
-            children: <Widget>[
-              const Icon(Icons.navigation, color: Color(0xFFE30713), size: 24),
-              const SizedBox(width: 16),
-              Text(
-                '${state.radiusKm}',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const Spacer(),
-              Text(
-                'km',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(color: Colors.white54),
-              ),
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.search,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(3),
             ],
+            onSubmitted: (_) => _submit(),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              icon: Icon(Icons.navigation, color: Color(0xFFE30713), size: 24),
+              suffixText: 'km',
+              hintText: '1 - 150',
+            ),
           ),
         ),
       ),
@@ -99,13 +131,30 @@ class _RadiusSearchBar extends ConsumerWidget {
           icon: const Icon(Icons.search, color: Colors.white, size: 24),
           height: 56,
           borderRadius: 18,
-          onPressed: () => ref
-              .read(theaterLocatorControllerProvider.notifier)
-              .searchNearby(),
+          isLoading: widget.state.isSearching,
+          onPressed: widget.state.isSearching ? null : _submit,
         ),
       ),
     ],
   );
+
+  Future<void> _submit() async {
+    final radius = int.tryParse(_controller.text.trim());
+    if (radius == null ||
+        radius < TheaterLocatorController.minRadiusKm ||
+        radius > TheaterLocatorController.maxRadiusKm) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Bán kính phải từ 1 đến 150 km.')),
+        );
+      return;
+    }
+    _focusNode.unfocus();
+    await ref
+        .read(theaterLocatorControllerProvider.notifier)
+        .searchNearby(radiusKm: radius);
+  }
 }
 
 class _RadiusChips extends ConsumerWidget {
@@ -126,9 +175,12 @@ class _RadiusChips extends ConsumerWidget {
               child: Text('$radius km'),
             ),
             selected: selected,
-            onSelected: (_) => ref
-                .read(theaterLocatorControllerProvider.notifier)
-                .setRadius(radius),
+            onSelected: (_) {
+              FocusManager.instance.primaryFocus?.unfocus();
+              ref
+                  .read(theaterLocatorControllerProvider.notifier)
+                  .setRadius(radius);
+            },
             selectedColor: const Color(0xFF2A1114),
             backgroundColor: const Color(0xFF141820),
             side: BorderSide(
@@ -301,7 +353,8 @@ class _TheaterCard extends StatelessWidget {
                   label: 'Xem lịch chiếu',
                   height: 48,
                   borderRadius: 16,
-                  onPressed: () {},
+                  onPressed: () =>
+                      context.push(AppRoutePaths.showtimesAt(theater.id)),
                 ),
               ],
             ),

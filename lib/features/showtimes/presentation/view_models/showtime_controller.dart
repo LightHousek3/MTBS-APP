@@ -10,3 +10,11 @@ final movieShowtimesProvider =
           .watch(showtimeApiServiceProvider)
           .getByMovieDate(movieId: query.movieId, date: query.date);
     });
+
+typedef TheaterShowtimeQuery = ({String theaterId, DateTime date});
+final theaterShowtimesProvider =
+    FutureProvider.family<List<Showtime>, TheaterShowtimeQuery>(
+      (ref, query) => ref
+          .watch(showtimeApiServiceProvider)
+          .getByTheaterDate(theaterId: query.theaterId, date: query.date),
+    );

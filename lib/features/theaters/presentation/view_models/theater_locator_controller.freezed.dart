@@ -292,7 +292,7 @@ $TheaterCopyWith<$Res> get theater {
 /// @nodoc
 mixin _$TheaterLocatorState {
 
- int get radiusKm; Position? get position; List<TheaterDistance> get theaters;
+ int get radiusKm; bool get isSearching; Position? get position; List<TheaterDistance> get theaters;
 /// Create a copy of TheaterLocatorState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -303,16 +303,16 @@ $TheaterLocatorStateCopyWith<TheaterLocatorState> get copyWith => _$TheaterLocat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TheaterLocatorState&&(identical(other.radiusKm, radiusKm) || other.radiusKm == radiusKm)&&(identical(other.position, position) || other.position == position)&&const DeepCollectionEquality().equals(other.theaters, theaters));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TheaterLocatorState&&(identical(other.radiusKm, radiusKm) || other.radiusKm == radiusKm)&&(identical(other.isSearching, isSearching) || other.isSearching == isSearching)&&(identical(other.position, position) || other.position == position)&&const DeepCollectionEquality().equals(other.theaters, theaters));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,radiusKm,position,const DeepCollectionEquality().hash(theaters));
+int get hashCode => Object.hash(runtimeType,radiusKm,isSearching,position,const DeepCollectionEquality().hash(theaters));
 
 @override
 String toString() {
-  return 'TheaterLocatorState(radiusKm: $radiusKm, position: $position, theaters: $theaters)';
+  return 'TheaterLocatorState(radiusKm: $radiusKm, isSearching: $isSearching, position: $position, theaters: $theaters)';
 }
 
 
@@ -323,7 +323,7 @@ abstract mixin class $TheaterLocatorStateCopyWith<$Res>  {
   factory $TheaterLocatorStateCopyWith(TheaterLocatorState value, $Res Function(TheaterLocatorState) _then) = _$TheaterLocatorStateCopyWithImpl;
 @useResult
 $Res call({
- int radiusKm, Position? position, List<TheaterDistance> theaters
+ int radiusKm, bool isSearching, Position? position, List<TheaterDistance> theaters
 });
 
 
@@ -340,10 +340,11 @@ class _$TheaterLocatorStateCopyWithImpl<$Res>
 
 /// Create a copy of TheaterLocatorState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? radiusKm = null,Object? position = freezed,Object? theaters = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? radiusKm = null,Object? isSearching = null,Object? position = freezed,Object? theaters = null,}) {
   return _then(_self.copyWith(
 radiusKm: null == radiusKm ? _self.radiusKm : radiusKm // ignore: cast_nullable_to_non_nullable
-as int,position: freezed == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
+as int,isSearching: null == isSearching ? _self.isSearching : isSearching // ignore: cast_nullable_to_non_nullable
+as bool,position: freezed == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
 as Position?,theaters: null == theaters ? _self.theaters : theaters // ignore: cast_nullable_to_non_nullable
 as List<TheaterDistance>,
   ));
@@ -430,10 +431,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int radiusKm,  Position? position,  List<TheaterDistance> theaters)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int radiusKm,  bool isSearching,  Position? position,  List<TheaterDistance> theaters)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TheaterLocatorState() when $default != null:
-return $default(_that.radiusKm,_that.position,_that.theaters);case _:
+return $default(_that.radiusKm,_that.isSearching,_that.position,_that.theaters);case _:
   return orElse();
 
 }
@@ -451,10 +452,10 @@ return $default(_that.radiusKm,_that.position,_that.theaters);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int radiusKm,  Position? position,  List<TheaterDistance> theaters)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int radiusKm,  bool isSearching,  Position? position,  List<TheaterDistance> theaters)  $default,) {final _that = this;
 switch (_that) {
 case _TheaterLocatorState():
-return $default(_that.radiusKm,_that.position,_that.theaters);case _:
+return $default(_that.radiusKm,_that.isSearching,_that.position,_that.theaters);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -471,10 +472,10 @@ return $default(_that.radiusKm,_that.position,_that.theaters);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int radiusKm,  Position? position,  List<TheaterDistance> theaters)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int radiusKm,  bool isSearching,  Position? position,  List<TheaterDistance> theaters)?  $default,) {final _that = this;
 switch (_that) {
 case _TheaterLocatorState() when $default != null:
-return $default(_that.radiusKm,_that.position,_that.theaters);case _:
+return $default(_that.radiusKm,_that.isSearching,_that.position,_that.theaters);case _:
   return null;
 
 }
@@ -486,10 +487,11 @@ return $default(_that.radiusKm,_that.position,_that.theaters);case _:
 
 
 class _TheaterLocatorState implements TheaterLocatorState {
-  const _TheaterLocatorState({this.radiusKm = 10, this.position, final  List<TheaterDistance> theaters = const <TheaterDistance>[]}): _theaters = theaters;
+  const _TheaterLocatorState({this.radiusKm = 10, this.isSearching = false, this.position, final  List<TheaterDistance> theaters = const <TheaterDistance>[]}): _theaters = theaters;
   
 
 @override@JsonKey() final  int radiusKm;
+@override@JsonKey() final  bool isSearching;
 @override final  Position? position;
  final  List<TheaterDistance> _theaters;
 @override@JsonKey() List<TheaterDistance> get theaters {
@@ -509,16 +511,16 @@ _$TheaterLocatorStateCopyWith<_TheaterLocatorState> get copyWith => __$TheaterLo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TheaterLocatorState&&(identical(other.radiusKm, radiusKm) || other.radiusKm == radiusKm)&&(identical(other.position, position) || other.position == position)&&const DeepCollectionEquality().equals(other._theaters, _theaters));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TheaterLocatorState&&(identical(other.radiusKm, radiusKm) || other.radiusKm == radiusKm)&&(identical(other.isSearching, isSearching) || other.isSearching == isSearching)&&(identical(other.position, position) || other.position == position)&&const DeepCollectionEquality().equals(other._theaters, _theaters));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,radiusKm,position,const DeepCollectionEquality().hash(_theaters));
+int get hashCode => Object.hash(runtimeType,radiusKm,isSearching,position,const DeepCollectionEquality().hash(_theaters));
 
 @override
 String toString() {
-  return 'TheaterLocatorState(radiusKm: $radiusKm, position: $position, theaters: $theaters)';
+  return 'TheaterLocatorState(radiusKm: $radiusKm, isSearching: $isSearching, position: $position, theaters: $theaters)';
 }
 
 
@@ -529,7 +531,7 @@ abstract mixin class _$TheaterLocatorStateCopyWith<$Res> implements $TheaterLoca
   factory _$TheaterLocatorStateCopyWith(_TheaterLocatorState value, $Res Function(_TheaterLocatorState) _then) = __$TheaterLocatorStateCopyWithImpl;
 @override @useResult
 $Res call({
- int radiusKm, Position? position, List<TheaterDistance> theaters
+ int radiusKm, bool isSearching, Position? position, List<TheaterDistance> theaters
 });
 
 
@@ -546,10 +548,11 @@ class __$TheaterLocatorStateCopyWithImpl<$Res>
 
 /// Create a copy of TheaterLocatorState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? radiusKm = null,Object? position = freezed,Object? theaters = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? radiusKm = null,Object? isSearching = null,Object? position = freezed,Object? theaters = null,}) {
   return _then(_TheaterLocatorState(
 radiusKm: null == radiusKm ? _self.radiusKm : radiusKm // ignore: cast_nullable_to_non_nullable
-as int,position: freezed == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
+as int,isSearching: null == isSearching ? _self.isSearching : isSearching // ignore: cast_nullable_to_non_nullable
+as bool,position: freezed == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
 as Position?,theaters: null == theaters ? _self._theaters : theaters // ignore: cast_nullable_to_non_nullable
 as List<TheaterDistance>,
   ));

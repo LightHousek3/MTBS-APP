@@ -35,4 +35,27 @@ class ShowtimeApiService {
         .where((showtime) => showtime.startTime.isAfter(now))
         .toList(growable: false);
   }
+
+  Future<List<Showtime>> getByTheaterDate({
+    required String theaterId,
+    required DateTime date,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/showtimes',
+      queryParameters: <String, dynamic>{
+        'theaterId': theaterId,
+        'date': DateFormat('yyyy-MM-dd').format(date),
+        'populate': 'movie,screen.theater',
+        'sortBy': 'startTime:asc',
+        'limit': 100,
+      },
+    );
+    return ApiResponse<List<Showtime>>.fromJson(
+      response.data!,
+      (json) => (json! as List<Object?>)
+          .map((item) => Showtime.fromJson(item! as Map<String, dynamic>))
+          .where((item) => item.startTime.isAfter(DateTime.now()))
+          .toList(),
+    ).data!;
+  }
 }

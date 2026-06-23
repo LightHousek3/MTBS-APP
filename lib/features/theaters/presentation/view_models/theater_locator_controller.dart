@@ -36,13 +36,16 @@ abstract class TheaterDistance with _$TheaterDistance {
 abstract class TheaterLocatorState with _$TheaterLocatorState {
   const factory TheaterLocatorState({
     @Default(10) int radiusKm,
+    @Default(false) bool isSearching,
     Position? position,
     @Default(<TheaterDistance>[]) List<TheaterDistance> theaters,
   }) = _TheaterLocatorState;
 }
 
 class TheaterLocatorController extends AsyncNotifier<TheaterLocatorState> {
-  static const radiusOptions = <int>[3, 5, 10, 20, 50];
+  static const minRadiusKm = 1;
+  static const maxRadiusKm = 150;
+  static const radiusOptions = <int>[3, 5, 10, 20, 50, 100, 150];
 
   TheaterRepository get _repository => ref.read(theaterRepositoryProvider);
 
@@ -59,10 +62,22 @@ class TheaterLocatorController extends AsyncNotifier<TheaterLocatorState> {
     }
   }
 
-  Future<void> searchNearby() async {
-    final previous = _current;
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+  Future<void> searchNearby({int? radiusKm}) async {
+    final requestedRadius = radiusKm ?? _current.radiusKm;
+    if (requestedRadius < minRadiusKm || requestedRadius > maxRadiusKm) {
+      throw RangeError.range(
+        requestedRadius,
+        minRadiusKm,
+        maxRadiusKm,
+        'radiusKm',
+      );
+    }
+    final previous = _current.copyWith(
+      radiusKm: requestedRadius,
+      isSearching: true,
+    );
+    state = AsyncData(previous);
+    try {
       final position = previous.position ?? await _resolveCurrentPosition();
       final theaters = await _repository.findNearby(
         latitude: position.latitude,
@@ -79,8 +94,16 @@ class TheaterLocatorController extends AsyncNotifier<TheaterLocatorState> {
               )
               .toList()
             ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-      return previous.copyWith(position: position, theaters: withDistance);
-    });
+      state = AsyncData(
+        previous.copyWith(
+          position: position,
+          theaters: withDistance,
+          isSearching: false,
+        ),
+      );
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+    }
   }
 
   TheaterLocatorState get _current => switch (state) {

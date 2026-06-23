@@ -10,14 +10,18 @@ import 'package:mtbs_app/features/auth/presentation/pages/login_page.dart';
 import 'package:mtbs_app/features/auth/presentation/pages/register_page.dart';
 import 'package:mtbs_app/features/auth/presentation/pages/verify_email_page.dart';
 import 'package:mtbs_app/features/auth/presentation/view_models/auth_controller.dart';
+import 'package:mtbs_app/features/booking/presentation/pages/payment_page.dart';
+import 'package:mtbs_app/features/booking/presentation/pages/seat_selection_page.dart';
+import 'package:mtbs_app/features/booking/presentation/pages/service_selection_page.dart';
 import 'package:mtbs_app/features/home/presentation/pages/home_page.dart';
 import 'package:mtbs_app/features/movies/presentation/pages/movie_detail_page.dart';
 import 'package:mtbs_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:mtbs_app/features/showtimes/presentation/pages/theater_showtimes_page.dart';
 import 'package:mtbs_app/features/theaters/presentation/pages/theaters_page.dart';
 
 part 'app_router.g.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 final class RouterRefreshNotifier extends ChangeNotifier {
   void refresh() => notifyListeners();
@@ -32,11 +36,42 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     });
 
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutePaths.home,
     refreshListenable: refreshNotifier,
     routes: <RouteBase>[
       ...$appRoutes,
+      GoRoute(
+        path: AppRoutePaths.theaterShowtimes,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) =>
+            TheaterShowtimesPage(theaterId: state.pathParameters['theaterId']!),
+      ),
+      GoRoute(
+        path: AppRoutePaths.seatSelection,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) =>
+            SeatSelectionPage(showtimeId: state.pathParameters['showtimeId']!),
+      ),
+      GoRoute(
+        path: AppRoutePaths.serviceSelection,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const ServiceSelectionPage(),
+      ),
+      GoRoute(
+        path: AppRoutePaths.paymentRoute,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) =>
+            PaymentPage(bookingId: state.pathParameters['bookingId']!),
+      ),
+      GoRoute(
+        path: AppRoutePaths.paymentResult,
+        parentNavigatorKey: rootNavigatorKey,
+        redirect: (_, state) {
+          final id = state.uri.queryParameters['bookingId'];
+          return id == null ? AppRoutePaths.home : AppRoutePaths.payment(id);
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: <StatefulShellBranch>[

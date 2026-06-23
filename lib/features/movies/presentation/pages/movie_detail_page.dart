@@ -6,6 +6,7 @@ import 'package:mtbs_app/core/widgets/app_hash_loader.dart';
 import 'package:mtbs_app/core/widgets/async_error_view.dart';
 import 'package:mtbs_app/core/widgets/gradient_button.dart';
 import 'package:mtbs_app/core/widgets/network_image_card.dart';
+import 'package:mtbs_app/features/booking/presentation/booking_navigation.dart';
 import 'package:mtbs_app/features/movies/domain/entities/movie.dart';
 import 'package:mtbs_app/features/movies/presentation/view_models/movie_controller.dart';
 import 'package:mtbs_app/features/movies/presentation/widgets/trailer_player.dart';
@@ -456,14 +457,14 @@ class _TheaterSelector extends StatelessWidget {
   }
 }
 
-class _TheaterShowtimeGroup extends StatelessWidget {
+class _TheaterShowtimeGroup extends ConsumerWidget {
   const _TheaterShowtimeGroup({required this.theater, required this.showtimes});
 
   final Theater? theater;
   final List<Showtime> showtimes;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
     child: DecoratedBox(
       decoration: BoxDecoration(
@@ -498,7 +499,8 @@ class _TheaterShowtimeGroup extends StatelessWidget {
               children: showtimes
                   .map((showtime) {
                     return OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () =>
+                          startBookingFlow(context, ref, showtime.id),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[

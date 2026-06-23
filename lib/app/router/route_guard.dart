@@ -24,6 +24,8 @@ abstract final class RouteAccessRegistry {
     GuardedPath.exact(AppRoutePaths.verifyEmail, RouteAccess.guestOnly),
     GuardedPath.exact(AppRoutePaths.forgotPassword, RouteAccess.guestOnly),
     GuardedPath.exact(AppRoutePaths.account, RouteAccess.authenticated),
+    GuardedPath.prefix('/booking/', RouteAccess.authenticated),
+    GuardedPath.prefix('/payment', RouteAccess.authenticated),
   ];
 
   static RouteAccess accessFor(String location) {

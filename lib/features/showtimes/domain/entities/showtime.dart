@@ -7,6 +7,7 @@ class Showtime {
     required this.endTime,
     required this.screen,
     this.status = '',
+    this.movie,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class Showtime {
   final DateTime endTime;
   final ShowtimeScreen screen;
   final String status;
+  final ShowtimeMovie? movie;
 
   factory Showtime.fromJson(Map<String, dynamic> json) {
     return Showtime(
@@ -22,8 +24,38 @@ class Showtime {
       endTime: DateTime.parse(_stringValue(json['endTime'])).toLocal(),
       screen: ShowtimeScreen.fromJson(json['screen']),
       status: _stringValue(json['status']),
+      movie: json['movie'] is Map<String, dynamic>
+          ? ShowtimeMovie.fromJson(json['movie']! as Map<String, dynamic>)
+          : null,
     );
   }
+}
+
+class ShowtimeMovie {
+  const ShowtimeMovie({
+    required this.id,
+    required this.title,
+    required this.type,
+    required this.duration,
+    this.imageUrl,
+    this.ageRating = 'P',
+  });
+  final String id;
+  final String title;
+  final String type;
+  final int duration;
+  final String? imageUrl;
+  final String ageRating;
+  factory ShowtimeMovie.fromJson(Map<String, dynamic> json) => ShowtimeMovie(
+    id: _stringValue(json['id'] ?? json['_id']),
+    title: _stringValue(json['title']),
+    type: _stringValue(json['type'], fallback: '2D'),
+    duration: (json['duration'] as num?)?.toInt() ?? 0,
+    imageUrl: json['image'] is Map<String, dynamic>
+        ? (json['image'] as Map<String, dynamic>)['url']?.toString()
+        : null,
+    ageRating: _stringValue(json['ageRating'], fallback: 'P'),
+  );
 }
 
 class ShowtimeScreen {
