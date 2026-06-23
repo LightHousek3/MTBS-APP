@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mtbs_app/core/widgets/app_hash_loader.dart';
+import 'package:mtbs_app/core/widgets/app_snack_bar.dart';
 import 'package:mtbs_app/core/widgets/async_error_view.dart';
 import 'package:mtbs_app/core/widgets/gradient_button.dart';
 import 'package:mtbs_app/core/widgets/network_image_card.dart';
@@ -13,6 +14,8 @@ import 'package:mtbs_app/features/movies/presentation/widgets/trailer_player.dar
 import 'package:mtbs_app/features/showtimes/domain/entities/showtime.dart';
 import 'package:mtbs_app/features/showtimes/presentation/view_models/showtime_controller.dart';
 import 'package:mtbs_app/features/theaters/domain/entities/theater.dart';
+import 'package:mtbs_app/features/waitlist/data/waitlist_data_providers.dart';
+import 'package:mtbs_app/features/waitlist/presentation/view_models/waitlist_controller.dart';
 
 class MovieDetailPage extends ConsumerStatefulWidget {
   const MovieDetailPage({required this.movieId, super.key});
@@ -218,13 +221,52 @@ class _PosterPlayButton extends StatelessWidget {
   );
 }
 
-class _MovieInfoTab extends StatelessWidget {
+class _MovieInfoTab extends ConsumerStatefulWidget {
   const _MovieInfoTab({required this.movie});
 
   final Movie movie;
 
   @override
+  ConsumerState<_MovieInfoTab> createState() => _MovieInfoTabState();
+}
+
+class _MovieInfoTabState extends ConsumerState<_MovieInfoTab> {
+  bool _updatingWaitlist = false;
+
+  Future<void> _toggleWaitlist(bool isSaved) async {
+    setState(() => _updatingWaitlist = true);
+    try {
+      final repository = ref.read(waitlistRepositoryProvider);
+      if (isSaved) {
+        await repository.removeMovie(widget.movie.id);
+      } else {
+        await repository.addMovie(widget.movie.id);
+      }
+      ref
+        ..invalidate(waitlistStatusProvider(widget.movie.id))
+        ..invalidate(waitlistProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              isSaved
+                  ? 'Đã xoá khỏi danh sách chờ.'
+                  : 'Đã lưu vào danh sách chờ.',
+            ),
+          ),
+        );
+    } catch (error) {
+      if (mounted) showAppErrorSnackBar(context, error);
+    } finally {
+      if (mounted) setState(() => _updatingWaitlist = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final movie = widget.movie;
     final genres = movie.genres
         .map((genre) => genre.name)
         .where((name) => name.trim().isNotEmpty)
@@ -249,10 +291,11 @@ class _MovieInfoTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        GradientButton(
-          label: 'Đặt vé',
-          icon: const Icon(Icons.confirmation_number, color: Colors.white),
-          onPressed: () => DefaultTabController.of(context).animateTo(1),
+        _MoviePrimaryActionButton(
+          movieId: movie.id,
+          updatingWaitlist: _updatingWaitlist,
+          onToggleWaitlist: _toggleWaitlist,
+          onBook: () => DefaultTabController.of(context).animateTo(1),
         ),
         const SizedBox(height: 24),
         _Section(
@@ -387,6 +430,80 @@ class _MovieShowtimesTabState extends ConsumerState<_MovieShowtimesTab> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MoviePrimaryActionButton extends ConsumerWidget {
+  const _MoviePrimaryActionButton({
+    required this.movieId,
+    required this.updatingWaitlist,
+    required this.onToggleWaitlist,
+    required this.onBook,
+  });
+
+  final String movieId;
+  final bool updatingWaitlist;
+  final ValueChanged<bool> onToggleWaitlist;
+  final VoidCallback onBook;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(waitlistStatusProvider(movieId));
+
+    return status.when(
+      loading: () =>
+          const SizedBox(height: 52, child: Center(child: AppHashLoader())),
+      error: (_, _) => OutlinedButton.icon(
+        onPressed: updatingWaitlist
+            ? null
+            : () => ref.invalidate(waitlistStatusProvider(movieId)),
+        icon: const Icon(Icons.refresh_rounded),
+        label: const Text('Tải lại trạng thái danh sách chờ'),
+      ),
+      data: (item) {
+        if (!item.canAddToWaitlist) {
+          return GradientButton(
+            label: 'Đặt vé',
+            icon: const Icon(Icons.confirmation_number, color: Colors.white),
+            onPressed: onBook,
+          );
+        }
+
+        final label = item.isSaved
+            ? 'Xoá khỏi danh sách chờ'
+            : 'Lưu vào danh sách chờ';
+        final icon = item.isSaved
+            ? Icons.bookmark_remove_outlined
+            : Icons.bookmark_add_outlined;
+
+        if (item.isSaved) {
+          return OutlinedButton.icon(
+            onPressed: updatingWaitlist
+                ? null
+                : () => onToggleWaitlist(item.isSaved),
+            icon: updatingWaitlist
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(icon),
+            label: Text(label),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          );
+        }
+
+        return GradientButton(
+          label: label,
+          icon: Icon(icon, color: Colors.white),
+          isLoading: updatingWaitlist,
+          onPressed: updatingWaitlist
+              ? null
+              : () => onToggleWaitlist(item.isSaved),
+        );
+      },
     );
   }
 }
