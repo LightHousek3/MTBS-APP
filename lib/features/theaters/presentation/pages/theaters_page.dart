@@ -20,15 +20,15 @@ class TheatersPage extends ConsumerWidget {
       appBar: AppBar(title: Text('Tìm rạp')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(26, 36, 26, 120),
+          padding: const EdgeInsets.fromLTRB(20, 15, 20, 120),
           children: <Widget>[
             Text(
               'Nhập bán kính để tìm rạp gần bạn nhất',
               style: Theme.of(
                 context,
-              ).textTheme.titleLarge?.copyWith(color: Colors.white60),
+              ).textTheme.titleMedium?.copyWith(color: Colors.white60),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 15),
             _RadiusSearchBar(state: current),
             const SizedBox(height: 16),
             _RadiusChips(state: current),
@@ -115,6 +115,8 @@ class _RadiusSearchBarState extends ConsumerState<_RadiusSearchBar> {
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             decoration: const InputDecoration(
+              filled: false,
+              fillColor: Colors.transparent,
               border: InputBorder.none,
               icon: Icon(Icons.navigation, color: Color(0xFFE30713), size: 24),
               suffixText: 'km',

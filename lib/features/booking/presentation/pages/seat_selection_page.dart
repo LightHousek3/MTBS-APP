@@ -59,10 +59,8 @@ class _SeatSelectionPageState extends ConsumerState<SeatSelectionPage>
       appBar: AppBar(title: const Text('Chọn ghế')),
       body: seating.when(
         loading: () => const Center(child: AppHashLoader()),
-        error: (error, _) => AsyncErrorView(
-          error: error,
-          onRetry: _refreshSeating,
-        ),
+        error: (error, _) =>
+            AsyncErrorView(error: error, onRetry: _refreshSeating),
         data: _content,
       ),
     );
@@ -88,27 +86,19 @@ class _SeatSelectionPageState extends ConsumerState<SeatSelectionPage>
     }
     return Column(
       children: <Widget>[
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          color: const Color(0xFF15151C),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                data.movie.title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 4),
-              Text(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            ListTile(
+              title: Text(data.movie.title, maxLines: 1),
+              subtitle: Text(
                 '${data.theater.name} • ${data.screenName} • ${DateFormat('HH:mm').format(data.showtime.startTime)}',
                 style: const TextStyle(color: Colors.white60),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+        const Divider(height: 1),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(12, 22, 12, 18),
@@ -124,18 +114,23 @@ class _SeatSelectionPageState extends ConsumerState<SeatSelectionPage>
                           child: Text(row.key, textAlign: TextAlign.center),
                         ),
                         Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: row.value
-                                  .map(
-                                    (seat) => _SeatButton(
-                                      seat: seat,
-                                      selected: _selectedIds.contains(seat.id),
-                                      onTap: () => unawaited(_toggleSeat(seat)),
-                                    ),
-                                  )
-                                  .toList(),
+                          child: Center(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: row.value
+                                    .map(
+                                      (seat) => _SeatButton(
+                                        seat: seat,
+                                        selected: _selectedIds.contains(
+                                          seat.id,
+                                        ),
+                                        onTap: () =>
+                                            unawaited(_toggleSeat(seat)),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
                             ),
                           ),
                         ),
@@ -326,14 +321,14 @@ class _SeatButton extends StatelessWidget {
         ? const Color(0xFFFFB020)
         : seat.type == 'SWEETBOX'
         ? const Color(0xFF4E8EF7)
-        : Colors.white38;
+        : Colors.white70;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: InkWell(
         onTap: seat.isAvailable ? onTap : null,
         borderRadius: BorderRadius.circular(5),
         child: Container(
-          width: seat.type == 'SWEETBOX' ? 42 : 28,
+          width: seat.type == 'SWEETBOX' ? 55 : 25,
           height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -369,7 +364,7 @@ class _SeatLegend extends StatelessWidget {
     runSpacing: 10,
     alignment: WrapAlignment.center,
     children: <Widget>[
-      _Legend(color: Colors.white38, label: 'Thường'),
+      _Legend(color: Colors.white70, label: 'Thường'),
       _Legend(color: Color(0xFFFFB020), label: 'VIP'),
       _Legend(color: Color(0xFF4E8EF7), label: 'Ghế đôi'),
       _Legend(color: Color(0xFFE30713), label: 'Đang chọn'),

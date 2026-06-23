@@ -45,7 +45,7 @@ abstract class TheaterLocatorState with _$TheaterLocatorState {
 class TheaterLocatorController extends AsyncNotifier<TheaterLocatorState> {
   static const minRadiusKm = 1;
   static const maxRadiusKm = 150;
-  static const radiusOptions = <int>[3, 5, 10, 20, 50, 100, 150];
+  static const radiusOptions = <int>[3, 5, 10, 20, 50];
 
   TheaterRepository get _repository => ref.read(theaterRepositoryProvider);
 
