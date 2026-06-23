@@ -81,6 +81,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> getCurrentUser() => _service.getMe();
+
+  @override
   Future<void> register({
     required String firstName,
     required String lastName,
