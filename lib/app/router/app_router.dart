@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mtbs_app/app/router/app_route_paths.dart';
 import 'package:mtbs_app/app/router/app_shell.dart';
-import 'package:mtbs_app/app/router/placeholder_page.dart';
 import 'package:mtbs_app/app/router/route_guard.dart';
 import 'package:mtbs_app/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:mtbs_app/features/auth/presentation/pages/login_page.dart';
@@ -16,6 +15,8 @@ import 'package:mtbs_app/features/booking/presentation/pages/service_selection_p
 import 'package:mtbs_app/features/home/presentation/pages/home_page.dart';
 import 'package:mtbs_app/features/movies/presentation/pages/movie_detail_page.dart';
 import 'package:mtbs_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:mtbs_app/features/promotions/presentation/pages/promotion_detail_page.dart';
+import 'package:mtbs_app/features/promotions/presentation/pages/promotion_list_page.dart';
 import 'package:mtbs_app/features/redeem/presentation/pages/redeem_detail_page.dart';
 import 'package:mtbs_app/features/redeem/presentation/pages/redeem_list_page.dart';
 import 'package:mtbs_app/features/showtimes/presentation/pages/theater_showtimes_page.dart';
@@ -84,6 +85,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             RedeemDetailPage(redeemId: state.pathParameters['redeemId']!),
       ),
+      GoRoute(
+        path: AppRoutePaths.promotionDetailPath,
+        builder: (_, state) => PromotionDetailPage(
+          promotionId: state.pathParameters['promotionId']!,
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: <StatefulShellBranch>[
@@ -115,11 +122,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutePaths.promotions,
-                builder: (_, _) => const PlaceholderPage(
-                  title: 'Khuyến Mãi',
-                  icon: Icons.card_giftcard,
-                  description: 'Ưu đãi chi tiết sẽ được mở ở phiên bản sau.',
-                ),
+                builder: (_, _) => const PromotionListPage(),
               ),
             ],
           ),

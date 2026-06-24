@@ -11,4 +11,9 @@ class PromotionRepositoryImpl implements PromotionRepository {
   Future<List<Promotion>> getPromotions({int limit = 10}) {
     return _service.getPromotions(limit: limit);
   }
+
+  @override
+  Future<Promotion> getPromotionById(String id) {
+    return _service.getPromotionById(id);
+  }
 }
