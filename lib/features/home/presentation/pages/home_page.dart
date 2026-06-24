@@ -458,10 +458,12 @@ class _PromotionCarousel extends StatelessWidget {
             icon: Icons.local_offer,
             color: const Color(0xFFBE123C),
             imageUrl: promotion.imageUrl,
+            onTap: () =>
+                context.push(AppRoutePaths.promotionDetail(promotion.id)),
           ),
         )
         .toList(growable: false);
-    return _StoryCarousel(title: 'Promotion', stories: stories);
+    return _StoryCarousel(title: 'Khuyến mãi', stories: stories);
   }
 }
 
@@ -552,6 +554,7 @@ class _StoryCardData {
     required this.icon,
     required this.color,
     this.imageUrl,
+    this.onTap,
   });
 
   final String title;
@@ -559,6 +562,7 @@ class _StoryCardData {
   final IconData icon;
   final Color color;
   final String? imageUrl;
+  final VoidCallback? onTap;
 }
 
 class _StoryCard extends StatelessWidget {
@@ -567,43 +571,47 @@ class _StoryCard extends StatelessWidget {
   final _StoryCardData data;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 230,
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(22),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: <Color>[data.color, data.color.withValues(alpha: 0.45)],
-      ),
-      image: data.imageUrl == null
-          ? null
-          : DecorationImage(
-              image: NetworkImage(data.imageUrl!),
-              fit: BoxFit.cover,
-              colorFilter: const ColorFilter.mode(
-                Color(0xAA000000),
-                BlendMode.darken,
-              ),
-            ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Icon(data.icon, size: 34),
-        const Spacer(),
-        Text(
-          data.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(22),
+    onTap: data.onTap,
+    child: Ink(
+      width: 230,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[data.color, data.color.withValues(alpha: 0.45)],
         ),
-        const SizedBox(height: 4),
-        Text(data.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-      ],
+        image: data.imageUrl == null
+            ? null
+            : DecorationImage(
+                image: NetworkImage(data.imageUrl!),
+                fit: BoxFit.cover,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xAA000000),
+                  BlendMode.darken,
+                ),
+              ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(data.icon, size: 34),
+          const Spacer(),
+          Text(
+            data.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(data.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ],
+      ),
     ),
   );
 }

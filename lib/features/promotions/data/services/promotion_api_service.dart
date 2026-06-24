@@ -22,4 +22,12 @@ class PromotionApiService {
           .toList(growable: false),
     ).data!;
   }
+
+  Future<Promotion> getPromotionById(String id) async {
+    final response = await _client.get<Map<String, dynamic>>('/promotions/$id');
+    return ApiResponse<Promotion>.fromJson(
+      response.data!,
+      (json) => Promotion.fromJson(json! as Map<String, dynamic>),
+    ).data!;
+  }
 }
