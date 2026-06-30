@@ -23,6 +23,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _password = TextEditingController();
   bool _obscure = true;
   _SocialProvider? _activeSocialProvider;
+  bool _didCompleteLogin = false;
 
   @override
   void dispose() {
@@ -34,6 +35,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
+    ref.listen(authControllerProvider, (_, next) {
+      final user = switch (next) {
+        AsyncData(:final value) => value,
+        _ => null,
+      };
+      if (user != null) _completeLogin();
+    });
+
+    final user = switch (auth) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+    if (user != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _completeLogin());
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Đăng nhập'),
@@ -171,7 +188,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         .login(email: _email.text, password: _password.text);
     if (!mounted) return;
     if (ok) {
-      context.go(widget.redirect ?? AppRoutePaths.home);
+      _completeLogin();
     } else {
       _showCurrentError();
     }
@@ -181,8 +198,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(AppRoutePaths.home);
+      context.go(_fallbackBackRoute);
     }
+  }
+
+  String get _fallbackBackRoute {
+    final redirect = AppRoutePaths.internalRedirect(widget.redirect);
+    if (redirect == AppRoutePaths.account) return AppRoutePaths.account;
+    return AppRoutePaths.home;
   }
 
   Future<void> _socialLogin(_SocialProvider provider) async {
@@ -195,10 +218,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!mounted) return;
     setState(() => _activeSocialProvider = null);
     if (ok) {
-      context.go(widget.redirect ?? AppRoutePaths.home);
+      _completeLogin();
     } else {
       _showCurrentError();
     }
+  }
+
+  void _completeLogin() {
+    if (_didCompleteLogin || !mounted) return;
+    _didCompleteLogin = true;
+
+    final redirect = AppRoutePaths.internalRedirect(widget.redirect);
+    if (redirect == null) {
+      context.go(AppRoutePaths.home);
+      return;
+    }
+
+    context.replace(redirect);
   }
 
   void _showCurrentError() {

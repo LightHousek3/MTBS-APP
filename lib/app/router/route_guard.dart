@@ -23,7 +23,6 @@ abstract final class RouteAccessRegistry {
     GuardedPath.exact(AppRoutePaths.register, RouteAccess.guestOnly),
     GuardedPath.exact(AppRoutePaths.verifyEmail, RouteAccess.guestOnly),
     GuardedPath.exact(AppRoutePaths.forgotPassword, RouteAccess.guestOnly),
-    GuardedPath.exact(AppRoutePaths.account, RouteAccess.authenticated),
     GuardedPath.prefix('/booking/', RouteAccess.authenticated),
     GuardedPath.prefix('/payment', RouteAccess.authenticated),
   ];
@@ -54,7 +53,11 @@ abstract final class RouteGuard {
       (RouteAccess.authenticated, false) => AppRoutePaths.loginFrom(
         state.uri.toString(),
       ),
-      (RouteAccess.guestOnly, true) => AppRoutePaths.home,
+      (RouteAccess.guestOnly, true) =>
+        AppRoutePaths.internalRedirect(state.uri.queryParameters['from']) ==
+                null
+            ? AppRoutePaths.home
+            : null,
       _ => null,
     };
   }

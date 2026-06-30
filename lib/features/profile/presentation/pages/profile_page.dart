@@ -122,8 +122,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Tài khoản'), centerTitle: false),
       body: SafeArea(
-        child: authState.isLoading && user == null
-            ? const Center(child: CircularProgressIndicator())
+        child: user == null
+            ? _GuestAccountView(
+                hasError: authState.hasError,
+                onLogin: () => context.push(
+                  AppRoutePaths.loginFrom(AppRoutePaths.account),
+                ),
+              )
             : RefreshIndicator(
                 onRefresh: _refreshVisibleData,
                 child: ListView(
@@ -193,6 +198,83 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
               ),
       ),
+    );
+  }
+}
+
+class _GuestAccountView extends StatelessWidget {
+  const _GuestAccountView({required this.hasError, required this.onLogin});
+
+  final bool hasError;
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+      children: <Widget>[
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Column(
+            children: <Widget>[
+              CircleAvatar(
+                radius: 38,
+                backgroundColor: colorScheme.primary.withValues(alpha: 0.14),
+                child: Icon(
+                  Icons.person_outline_rounded,
+                  size: 42,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Đăng nhập để xem tài khoản',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Theo dõi vé, điểm thưởng, quà đã đổi và danh sách phim chờ của bạn.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (hasError) ...<Widget>[
+                const SizedBox(height: 12),
+                Text(
+                  'Không thể khôi phục phiên đăng nhập. Vui lòng đăng nhập lại.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onLogin,
+                  icon: const Icon(Icons.login_rounded),
+                  label: const Text('Đăng nhập'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

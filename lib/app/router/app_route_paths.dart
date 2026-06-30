@@ -32,4 +32,13 @@ abstract final class AppRoutePaths {
       '$login?from=${Uri.encodeComponent(from)}';
   static String verifyEmailFor(String email) =>
       '$verifyEmail?email=${Uri.encodeComponent(email)}';
+
+  static String? internalRedirect(String? value) {
+    final redirect = value?.trim();
+    if (redirect == null || redirect.isEmpty) return null;
+    final uri = Uri.tryParse(redirect);
+    if (uri == null || uri.hasScheme || uri.hasAuthority) return null;
+    if (!redirect.startsWith('/') || redirect.startsWith('//')) return null;
+    return redirect;
+  }
 }
