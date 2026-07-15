@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -13,27 +14,51 @@ import 'package:mtbs_app/core/widgets/gradient_button.dart';
 import 'package:mtbs_app/core/widgets/network_image_card.dart';
 import 'package:mtbs_app/features/booking/domain/entities/booking_entities.dart';
 import 'package:mtbs_app/features/booking/presentation/view_models/booking_controller.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
-  const PaymentPage({required this.bookingId, super.key});
+  const PaymentPage({required this.bookingId, this.initialResult, super.key});
+
   final String bookingId;
+  final PaymentPageResultData? initialResult;
+
   @override
   ConsumerState<PaymentPage> createState() => _PaymentPageState();
 }
 
 class _PaymentPageState extends ConsumerState<PaymentPage> {
-  WebViewController? _webView;
+  Uri? _paymentUri;
   bool _startingPayment = false;
   bool _handlingPaymentReturn = false;
+  bool _webViewLoading = false;
+  String? _lastHandledResultKey;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_consumeIncomingResult(widget.initialResult));
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant PaymentPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialResult != widget.initialResult) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_consumeIncomingResult(widget.initialResult));
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_webView case final controller?) {
+    if (_paymentUri case final paymentUri?) {
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) unawaited(_closePaymentWebView());
+          if (!didPop) {
+            unawaited(_closePaymentWebView());
+          }
         },
         child: Scaffold(
           appBar: AppBar(
@@ -43,14 +68,69 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             ),
             title: const Text('Thanh toán VNPay'),
           ),
-          body: WebViewWidget(controller: controller),
+          body: Stack(
+            children: <Widget>[
+              InAppWebView(
+                initialUrlRequest: URLRequest(url: WebUri.uri(paymentUri)),
+                initialSettings: InAppWebViewSettings(
+                  javaScriptEnabled: true,
+                  useShouldOverrideUrlLoading: true,
+                  supportZoom: false,
+                  transparentBackground: false,
+                ),
+                onLoadStart: (_, url) {
+                  if (_tryHandlePaymentUri(url)) {
+                    return;
+                  }
+                  if (mounted) {
+                    setState(() => _webViewLoading = true);
+                  }
+                },
+                onLoadStop: (_, url) {
+                  if (_tryHandlePaymentUri(url)) {
+                    return;
+                  }
+                  if (mounted) {
+                    setState(() => _webViewLoading = false);
+                  }
+                },
+                shouldOverrideUrlLoading: (_, action) async {
+                  if (_tryHandlePaymentUri(action.request.url)) {
+                    return NavigationActionPolicy.CANCEL;
+                  }
+                  return NavigationActionPolicy.ALLOW;
+                },
+                onReceivedServerTrustAuthRequest: (_, challenge) async {
+                  final host = challenge.protectionSpace.host.toLowerCase();
+                  if (_isTrustedVnpayHost(host)) {
+                    return ServerTrustAuthResponse(
+                      action: ServerTrustAuthResponseAction.PROCEED,
+                    );
+                  }
+
+                  return ServerTrustAuthResponse(
+                    action: ServerTrustAuthResponseAction.CANCEL,
+                  );
+                },
+                onReceivedError: (_, request, error) {
+                  if (request.isForMainFrame == false) {
+                    return;
+                  }
+                  unawaited(_handleWebViewError(error.description));
+                },
+              ),
+              if (_webViewLoading) const Center(child: AppHashLoader()),
+            ],
+          ),
         ),
       );
     }
+
     final details = ref.watch(bookingDetailsProvider(widget.bookingId));
     final pending =
         ref.watch(pendingBookingControllerProvider).value ??
         const PendingBookingState();
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -131,7 +211,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${DateFormat('HH:mm - dd/MM/yyyy').format(booking.showtime.startTime)} • ${booking.showtime.screenName}',
+                          '${DateFormat('HH:mm - dd/MM/yyyy').format(booking.showtime.startTime)} '
+                          '• ${booking.showtime.screenName}',
                           style: const TextStyle(color: Colors.white54),
                         ),
                       ],
@@ -291,25 +372,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     setState(() => _startingPayment = true);
     try {
       final url = await ref.read(paymentUrlProvider(widget.bookingId).future);
-      final controller = WebViewController();
-      await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
-      await controller.setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (request) {
-            final uri = Uri.tryParse(request.url);
-            if (uri?.scheme == 'mtbs') {
-              unawaited(_handlePaymentReturn(uri!));
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      );
-      await controller.loadRequest(Uri.parse(url));
+      final paymentUri = Uri.parse(url);
       if (mounted) {
         setState(() {
-          _webView = controller;
+          _paymentUri = paymentUri;
           _startingPayment = false;
+          _webViewLoading = true;
         });
       }
     } catch (error) {
@@ -320,12 +388,31 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     }
   }
 
+  Future<void> _consumeIncomingResult(PaymentPageResultData? result) async {
+    if (!mounted || result == null || _handlingPaymentReturn) {
+      return;
+    }
+
+    final resultKey = result.identityKey;
+    if (_lastHandledResultKey == resultKey) {
+      return;
+    }
+    _lastHandledResultKey = resultKey;
+
+    await _handlePaymentReturn(result.toUri());
+  }
+
   Future<void> _handlePaymentReturn(Uri uri) async {
-    if (!mounted || _handlingPaymentReturn) return;
+    if (!mounted || _handlingPaymentReturn) {
+      return;
+    }
     _handlingPaymentReturn = true;
 
     try {
-      setState(() => _webView = null);
+      setState(() {
+        _paymentUri = null;
+        _webViewLoading = false;
+      });
 
       final returnedBookingId = uri.queryParameters['bookingId'];
       if (returnedBookingId != null && returnedBookingId != widget.bookingId) {
@@ -342,7 +429,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       );
 
       await ref.read(pendingBookingControllerProvider.notifier).refresh();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       final message = latestBooking.status == 'CONFIRMED'
           ? 'Thanh toán thành công.'
@@ -353,7 +442,45 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
     } catch (error) {
-      if (mounted) showAppErrorSnackBar(context, error);
+      if (mounted) {
+        showAppErrorSnackBar(context, error);
+      }
+    } finally {
+      _handlingPaymentReturn = false;
+    }
+  }
+
+  Future<void> _handleWebViewError(String description) async {
+    if (!mounted || _handlingPaymentReturn) {
+      return;
+    }
+    _handlingPaymentReturn = true;
+
+    try {
+      setState(() {
+        _paymentUri = null;
+        _webViewLoading = false;
+      });
+
+      final latestBooking = await _pollBookingStatus(
+        waitForConfirmation: true,
+        maxAttempts: 8,
+      );
+      await ref.read(pendingBookingControllerProvider.notifier).refresh();
+      if (!mounted) {
+        return;
+      }
+
+      final message = latestBooking.status == 'CONFIRMED'
+          ? 'Thanh toán thành công.'
+          : 'Không thể tải cổng thanh toán VNPay. Vui lòng thử lại.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (mounted) {
+        showAppErrorSnackBar(context, description);
+      }
     } finally {
       _handlingPaymentReturn = false;
     }
@@ -361,34 +488,64 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
   Future<Booking> _pollBookingStatus({
     required bool waitForConfirmation,
+    int maxAttempts = 5,
   }) async {
-    for (var attempt = 0; attempt < 5; attempt++) {
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
       ref.invalidate(bookingDetailsProvider(widget.bookingId));
       final booking = await ref.read(
         bookingDetailsProvider(widget.bookingId).future,
       );
 
       final shouldStop =
-          !waitForConfirmation || booking.status != 'PENDING' || attempt == 4;
-      if (shouldStop) return booking;
+          !waitForConfirmation ||
+          booking.status != 'PENDING' ||
+          attempt == maxAttempts - 1;
+      if (shouldStop) {
+        return booking;
+      }
 
       await Future<void>.delayed(const Duration(seconds: 2));
-      if (!mounted) return booking;
+      if (!mounted) {
+        return booking;
+      }
     }
 
     throw StateError('Không thể đồng bộ trạng thái thanh toán.');
   }
 
   Future<void> _closePaymentWebView() async {
-    if (!mounted || _webView == null) return;
-    setState(() => _webView = null);
+    if (!mounted || _paymentUri == null) {
+      return;
+    }
+    setState(() {
+      _paymentUri = null;
+      _webViewLoading = false;
+    });
     try {
       ref.invalidate(bookingDetailsProvider(widget.bookingId));
       await ref.read(pendingBookingControllerProvider.notifier).refresh();
     } catch (error) {
-      if (mounted) showAppErrorSnackBar(context, error);
+      if (mounted) {
+        showAppErrorSnackBar(context, error);
+      }
     }
   }
+
+  bool _tryHandlePaymentUri(Uri? uri) {
+    if (uri == null) {
+      return false;
+    }
+    if (uri.scheme == 'mtbs' &&
+        uri.host.isEmpty &&
+        uri.path == '/payment-result') {
+      unawaited(_handlePaymentReturn(uri));
+      return true;
+    }
+    return false;
+  }
+
+  bool _isTrustedVnpayHost(String host) =>
+      host == 'sandbox.vnpayment.vn' || host.endsWith('.vnpayment.vn');
 
   Future<void> _cancel() async {
     final confirmed = await showDialog<bool>(
@@ -408,20 +565,27 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
     try {
       await ref
           .read(pendingBookingControllerProvider.notifier)
           .cancel(widget.bookingId);
-      if (mounted) context.go(AppRoutePaths.home);
+      if (mounted) {
+        context.go(AppRoutePaths.home);
+      }
     } catch (error) {
-      if (mounted) showAppErrorSnackBar(context, error);
+      if (mounted) {
+        showAppErrorSnackBar(context, error);
+      }
     }
   }
 }
 
 class _ServicePriceLine extends StatelessWidget {
   const _ServicePriceLine({required this.service});
+
   final BookingServiceLine service;
 
   @override
@@ -473,6 +637,7 @@ class _ServicePriceLine extends StatelessWidget {
 
 class _BookingQrCode extends StatelessWidget {
   const _BookingQrCode({required this.dataUri});
+
   final String dataUri;
 
   @override
@@ -507,8 +672,54 @@ String _statusText(String status) => status == 'CONFIRMED'
     : status == 'CANCELLED'
     ? 'Đã hủy'
     : 'Đã hết hạn';
+
 String _money(num value) => NumberFormat.currency(
   locale: 'vi_VN',
   symbol: 'đ',
   decimalDigits: 0,
 ).format(value);
+
+class PaymentPageResultData {
+  const PaymentPageResultData({
+    required this.bookingId,
+    this.success,
+    this.status,
+    this.message,
+  });
+
+  final String bookingId;
+  final bool? success;
+  final String? status;
+  final String? message;
+
+  String get identityKey =>
+      '$bookingId|${success?.toString() ?? ''}|${status ?? ''}|${message ?? ''}';
+
+  Uri toUri() => Uri(
+    scheme: 'mtbs',
+    path: '/payment-result',
+    queryParameters: <String, String>{
+      'bookingId': bookingId,
+      if (success != null) 'success': success.toString(),
+      if (status != null && status!.isNotEmpty) 'status': status!,
+      if (message != null && message!.isNotEmpty) 'message': message!,
+    },
+  );
+
+  static PaymentPageResultData? fromQueryParameters(
+    Map<String, String> queryParameters,
+  ) {
+    final bookingId = queryParameters['bookingId'];
+    if (bookingId == null || bookingId.isEmpty) {
+      return null;
+    }
+
+    final rawSuccess = queryParameters['success'];
+    return PaymentPageResultData(
+      bookingId: bookingId,
+      success: rawSuccess == null ? null : rawSuccess.toLowerCase() == 'true',
+      status: queryParameters['status'],
+      message: queryParameters['message'],
+    );
+  }
+}

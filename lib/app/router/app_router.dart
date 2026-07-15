@@ -65,15 +65,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutePaths.paymentRoute,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) =>
-            PaymentPage(bookingId: state.pathParameters['bookingId']!),
+        builder: (_, state) => PaymentPage(
+          bookingId: state.pathParameters['bookingId']!,
+          initialResult: PaymentPageResultData.fromQueryParameters(
+            state.uri.queryParameters,
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutePaths.paymentResult,
         parentNavigatorKey: rootNavigatorKey,
         redirect: (_, state) {
           final id = state.uri.queryParameters['bookingId'];
-          return id == null ? AppRoutePaths.home : AppRoutePaths.payment(id);
+          if (id == null) return AppRoutePaths.home;
+
+          final nextQuery = Map<String, String>.from(state.uri.queryParameters)
+            ..remove('bookingId');
+          final nextUri = Uri(
+            path: AppRoutePaths.payment(id),
+            queryParameters: nextQuery.isEmpty ? null : nextQuery,
+          );
+          return nextUri.toString();
         },
       ),
       GoRoute(
