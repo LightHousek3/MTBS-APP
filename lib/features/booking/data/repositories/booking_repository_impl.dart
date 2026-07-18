@@ -22,6 +22,12 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<Booking?> getPendingBooking() => _api.getPendingBooking();
   @override
+  Future<List<Booking>> getBookings({
+    String? status,
+    int page = 1,
+    int limit = 30,
+  }) => _api.getBookings(status: status, page: page, limit: limit);
+  @override
   Future<Booking> getBooking(String id) => _api.getBooking(id);
   @override
   Future<Booking> cancelBooking(String id) => _api.cancelBooking(id);

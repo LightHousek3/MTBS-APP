@@ -9,6 +9,8 @@ import 'package:mtbs_app/core/widgets/async_error_view.dart';
 import 'package:mtbs_app/core/widgets/network_image_card.dart';
 import 'package:mtbs_app/features/auth/domain/entities/auth_user.dart';
 import 'package:mtbs_app/features/auth/presentation/view_models/auth_controller.dart';
+import 'package:mtbs_app/features/booking/domain/entities/booking_entities.dart';
+import 'package:mtbs_app/features/booking/presentation/view_models/booking_controller.dart';
 import 'package:mtbs_app/features/redeem/data/redeem_data_providers.dart';
 import 'package:mtbs_app/features/redeem/domain/entities/redeem_gift.dart';
 import 'package:mtbs_app/features/redeem/presentation/view_models/redeem_controller.dart';
@@ -25,13 +27,19 @@ class ProfilePage extends ConsumerStatefulWidget {
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   int _selectedTab = 0;
+  String _bookingStatus = 'ALL';
   String _historyStatus = 'ALL';
   final Set<String> _cancelling = <String>{};
+  final Set<String> _cancellingBookings = <String>{};
   final Set<String> _removingWaitlistMovies = <String>{};
 
   Future<void> _refreshVisibleData() async {
     await ref.read(authControllerProvider.notifier).refreshUser();
-    if (_selectedTab == 2) {
+    if (_selectedTab == 1) {
+      final _ = await ref.refresh(
+        bookingHistoryProvider(_bookingStatus).future,
+      );
+    } else if (_selectedTab == 2) {
       final _ = await ref.refresh(
         redeemGiftHistoryProvider(_historyStatus).future,
       );
@@ -87,6 +95,58 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  Future<void> _cancelBooking(Booking booking) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hủy vé?'),
+        content: Text(
+          'Bạn muốn hủy booking #${_shortBookingCode(booking.id)}?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Không'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hủy vé'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancellingBookings.add(booking.id));
+    try {
+      await ref.read(bookingRepositoryProvider).cancelBooking(booking.id);
+      ref
+        ..invalidate(bookingHistoryProvider)
+        ..invalidate(bookingDetailsProvider(booking.id))
+        ..invalidate(pendingBookingControllerProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Đã hủy vé.')));
+    } catch (error) {
+      if (mounted) showAppErrorSnackBar(context, error);
+    } finally {
+      if (mounted) setState(() => _cancellingBookings.remove(booking.id));
+    }
+  }
+
+  void _showBookingDetails(Booking booking) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _BookingDetailDialog(
+        bookingId: booking.id,
+        isCancelling: _cancellingBookings.contains(booking.id),
+        onCancel: _cancelBooking,
+      ),
+    );
+  }
+
   Future<void> _removeWaitlistMovie(WaitlistItem item) async {
     final movieId = item.movie.id;
     setState(() => _removingWaitlistMovies.add(movieId));
@@ -140,7 +200,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       selectedIndex: _selectedTab,
                       onSelected: (index) {
                         setState(() => _selectedTab = index);
-                        if (index == 2) {
+                        if (index == 1) {
+                          ref.invalidate(
+                            bookingHistoryProvider(_bookingStatus),
+                          );
+                        } else if (index == 2) {
                           ref.invalidate(
                             redeemGiftHistoryProvider(_historyStatus),
                           );
@@ -154,14 +218,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       _InfoSection(user: user),
                       const SizedBox(height: 18),
                       _ActionSection(
-                        onRedeem: user == null
-                            ? null
-                            : () => context.push(AppRoutePaths.redeems),
-                        onLogout: user == null
-                            ? null
-                            : () => ref
-                                  .read(authControllerProvider.notifier)
-                                  .logout(),
+                        onRedeem: () => context.push(AppRoutePaths.redeems),
+                        onLogout: () =>
+                            ref.read(authControllerProvider.notifier).logout(),
+                      ),
+                    ] else if (_selectedTab == 1) ...[
+                      _BookingHistorySection(
+                        status: _bookingStatus,
+                        cancellingIds: _cancellingBookings,
+                        onStatusChanged: (status) {
+                          ref.invalidate(bookingHistoryProvider(status));
+                          setState(() => _bookingStatus = status);
+                        },
+                        onOpenDetails: _showBookingDetails,
+                        onCancel: _cancelBooking,
                       ),
                     ] else if (_selectedTab == 2) ...[
                       _RedeemHistorySection(
@@ -498,6 +568,517 @@ class _InfoSection extends StatelessWidget {
   static String _emptyAsFallback(String? value) {
     if (value == null || value.trim().isEmpty) return 'Chưa cập nhật';
     return value.trim();
+  }
+}
+
+class _BookingHistorySection extends ConsumerWidget {
+  const _BookingHistorySection({
+    required this.status,
+    required this.cancellingIds,
+    required this.onStatusChanged,
+    required this.onOpenDetails,
+    required this.onCancel,
+  });
+
+  final String status;
+  final Set<String> cancellingIds;
+  final ValueChanged<String> onStatusChanged;
+  final ValueChanged<Booking> onOpenDetails;
+  final ValueChanged<Booking> onCancel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookings = ref.watch(bookingHistoryProvider(status));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _BookingFilterBar(selectedStatus: status, onChanged: onStatusChanged),
+        const SizedBox(height: 12),
+        bookings.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: AppHashLoader()),
+          ),
+          error: (error, _) => AsyncErrorView(
+            error: error,
+            onRetry: () => ref.invalidate(bookingHistoryProvider(status)),
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: Text('Chưa có lịch sử đặt vé.')),
+              );
+            }
+
+            return Column(
+              children: items
+                  .map(
+                    (booking) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _BookingHistoryCard(
+                        booking: booking,
+                        isCancelling: cancellingIds.contains(booking.id),
+                        onTap: () => onOpenDetails(booking),
+                        onCancel: () => onCancel(booking),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingFilterBar extends StatelessWidget {
+  const _BookingFilterBar({
+    required this.selectedStatus,
+    required this.onChanged,
+  });
+
+  final String selectedStatus;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const filters = <String, String>{
+      'ALL': 'Tất cả',
+      'PENDING': 'Chờ chiếu',
+      'CONFIRMED': 'Đã xem',
+      'CANCELLED': 'Đã hủy',
+      'REFUNDED': 'Hoàn tiền',
+    };
+
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: filters.entries
+            .map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(entry.value),
+                  selected: selectedStatus == entry.key,
+                  onSelected: (_) => onChanged(entry.key),
+                ),
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _BookingHistoryCard extends StatelessWidget {
+  const _BookingHistoryCard({
+    required this.booking,
+    required this.isCancelling,
+    required this.onTap,
+    required this.onCancel,
+  });
+
+  final Booking booking;
+  final bool isCancelling;
+  final VoidCallback onTap;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final movie = booking.showtime.movie;
+    final theater = booking.showtime.theater;
+    final canCancel = booking.isPending;
+
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.26),
+            ),
+          ),
+          child: Column(
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(
+                    width: 62,
+                    height: 82,
+                    child: NetworkImageCard(
+                      imageUrl: movie?.imageUrl,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          movie?.title ?? 'Vé xem phim',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        _MovieMetaLine(
+                          icon: Icons.location_on_outlined,
+                          label: theater?.name ?? 'Rạp chiếu',
+                        ),
+                        const SizedBox(height: 3),
+                        _MovieMetaLine(
+                          icon: Icons.schedule_rounded,
+                          label: DateFormat(
+                            'dd/MM/yyyy HH:mm',
+                          ).format(booking.showtime.startTime),
+                        ),
+                        const SizedBox(height: 3),
+                        _MovieMetaLine(
+                          icon: Icons.event_seat_outlined,
+                          label: booking.seatNumbers.join(', '),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _BookingStatusPill(status: booking.status),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              const SizedBox(height: 6),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      '#${_shortBookingCode(booking.id)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _money(booking.payableTotal),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (canCancel) ...[
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 32,
+                      child: OutlinedButton(
+                        onPressed: isCancelling ? null : onCancel,
+                        child: isCancelling
+                            ? const SizedBox.square(
+                                dimension: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Hủy vé'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingDetailDialog extends ConsumerWidget {
+  const _BookingDetailDialog({
+    required this.bookingId,
+    required this.isCancelling,
+    required this.onCancel,
+  });
+
+  final String bookingId;
+  final bool isCancelling;
+  final ValueChanged<Booking> onCancel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final details = ref.watch(bookingDetailsProvider(bookingId));
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: details.when(
+          loading: () => const SizedBox(
+            height: 220,
+            child: Center(child: AppHashLoader()),
+          ),
+          error: (error, _) => Padding(
+            padding: const EdgeInsets.all(18),
+            child: AsyncErrorView(
+              error: error,
+              onRetry: () => ref.invalidate(bookingDetailsProvider(bookingId)),
+            ),
+          ),
+          data: (booking) => _BookingDetailContent(
+            booking: booking,
+            isCancelling: isCancelling,
+            onCancel: onCancel,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingDetailContent extends StatelessWidget {
+  const _BookingDetailContent({
+    required this.booking,
+    required this.isCancelling,
+    required this.onCancel,
+  });
+
+  final Booking booking;
+  final bool isCancelling;
+  final ValueChanged<Booking> onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final movie = booking.showtime.movie;
+    final theater = booking.showtime.theater;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'Chi tiết booking',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              SizedBox(
+                width: 82,
+                height: 116,
+                child: NetworkImageCard(
+                  imageUrl: movie?.imageUrl,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      movie?.title ?? 'Vé xem phim',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _BookingStatusPill(status: booking.status),
+                    const SizedBox(height: 10),
+                    _MovieMetaLine(
+                      icon: Icons.location_on_outlined,
+                      label: theater?.name ?? 'Rạp chiếu',
+                    ),
+                    const SizedBox(height: 4),
+                    _MovieMetaLine(
+                      icon: Icons.meeting_room_outlined,
+                      label: booking.showtime.screenName,
+                    ),
+                    const SizedBox(height: 4),
+                    _MovieMetaLine(
+                      icon: Icons.schedule_rounded,
+                      label: DateFormat(
+                        'dd/MM/yyyy HH:mm',
+                      ).format(booking.showtime.startTime),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _DetailRow(label: 'Mã booking', value: '#${booking.id}'),
+          _DetailRow(label: 'Ghế', value: booking.seatNumbers.join(', ')),
+          _DetailRow(label: 'Tiền vé', value: _money(booking.ticketFinalTotal)),
+          if (booking.services.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Bắp nước',
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...booking.services.map(
+              (service) => _DetailRow(
+                label: '${service.name} x${service.quantity}',
+                value: _money(service.finalTotal),
+              ),
+            ),
+          ],
+          if (booking.pointsUsed > 0)
+            _DetailRow(label: 'Điểm sử dụng', value: '-${booking.pointsUsed}'),
+          const SizedBox(height: 8),
+          Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.45)),
+          _DetailRow(
+            label: 'Tổng thanh toán',
+            value: _money(booking.payableTotal),
+            emphasized: true,
+          ),
+          if (booking.isPending) ...[
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: isCancelling
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      onCancel(booking);
+                    },
+              icon: isCancelling
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cancel_outlined),
+              label: const Text('Hủy vé'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: emphasized ? colorScheme.primary : null,
+                fontWeight: emphasized ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingStatusPill extends StatelessWidget {
+  const _BookingStatusPill({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      'PENDING' => Colors.orange,
+      'CONFIRMED' => Colors.green,
+      'CANCELLED' => Theme.of(context).colorScheme.error,
+      'REFUNDED' => Colors.teal,
+      _ => Theme.of(context).colorScheme.onSurfaceVariant,
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        child: Text(
+          switch (status) {
+            'PENDING' => 'Sắp chiếu',
+            'CONFIRMED' => 'Đã xem',
+            'CANCELLED' => 'Đã hủy',
+            'REFUNDED' => 'Hoàn tiền',
+            _ => status,
+          },
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1234,3 +1815,11 @@ class _MenuRow extends StatelessWidget {
     );
   }
 }
+
+String _shortBookingCode(String id) {
+  if (id.length <= 10) return id;
+  return id.substring(id.length - 10);
+}
+
+String _money(num value) =>
+    NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(value);
