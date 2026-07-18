@@ -9,6 +9,11 @@ abstract interface class BookingRepository {
     required Map<String, int> services,
   });
   Future<Booking?> getPendingBooking();
+  Future<List<Booking>> getBookings({
+    String? status,
+    int page = 1,
+    int limit = 30,
+  });
   Future<Booking> getBooking(String bookingId);
   Future<Booking> cancelBooking(String bookingId);
   Future<String> createPaymentUrl(String bookingId);

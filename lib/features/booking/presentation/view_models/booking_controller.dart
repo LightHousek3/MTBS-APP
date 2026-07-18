@@ -26,6 +26,10 @@ final cinemaServicesProvider = FutureProvider.autoDispose
 final bookingDetailsProvider = FutureProvider.family<Booking, String>(
   (ref, id) => ref.watch(bookingRepositoryProvider).getBooking(id),
 );
+final bookingHistoryProvider = FutureProvider.autoDispose
+    .family<List<Booking>, String?>((ref, status) {
+      return ref.watch(bookingRepositoryProvider).getBookings(status: status);
+    });
 final paymentUrlProvider = FutureProvider.autoDispose.family<String, String>(
   (ref, id) => ref.watch(bookingRepositoryProvider).createPaymentUrl(id),
 );

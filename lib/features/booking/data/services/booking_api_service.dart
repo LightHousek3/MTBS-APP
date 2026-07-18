@@ -64,6 +64,28 @@ class BookingApiService {
     return data is Map<String, dynamic> ? Booking.fromJson(data) : null;
   }
 
+  Future<List<Booking>> getBookings({
+    String? status,
+    int page = 1,
+    int limit = 30,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/bookings',
+      queryParameters: <String, dynamic>{
+        'page': page,
+        'limit': limit,
+        'sortBy': 'createdAt:desc',
+        if (status != null && status != 'ALL') 'status': status,
+      },
+    );
+    return ApiResponse<List<Booking>>.fromJson(
+      response.data!,
+      (json) => (json! as List<Object?>)
+          .map((item) => Booking.fromJson(item! as Map<String, dynamic>))
+          .toList(growable: false),
+    ).data!;
+  }
+
   Future<Booking> getBooking(String id) async => _booking(
     (await _client.get<Map<String, dynamic>>('/bookings/$id')).data!,
   );
