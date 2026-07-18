@@ -16,6 +16,7 @@ import 'package:mtbs_app/features/showtimes/presentation/view_models/showtime_co
 import 'package:mtbs_app/features/theaters/domain/entities/theater.dart';
 import 'package:mtbs_app/features/waitlist/data/waitlist_data_providers.dart';
 import 'package:mtbs_app/features/waitlist/presentation/view_models/waitlist_controller.dart';
+import 'package:mtbs_app/features/reviews/presentation/pages/movie_reviews_tab.dart';
 
 class MovieDetailPage extends ConsumerStatefulWidget {
   const MovieDetailPage({required this.movieId, super.key});
@@ -86,7 +87,7 @@ class _MovieDetailContent extends StatelessWidget {
         children: <Widget>[
           _MovieInfoTab(movie: movie),
           _MovieShowtimesTab(movieId: movie.id),
-          const _MovieReviewsPlaceholderTab(),
+          MovieReviewsTab(movieId: movie.id),
         ],
       ),
     ),
