@@ -208,6 +208,7 @@ class Booking {
     required this.createdAt,
     required this.expiresAt,
     this.qrCode,
+    this.refundRequest,
   });
   final String id;
   final BookingShowtime showtime;
@@ -222,8 +223,13 @@ class Booking {
   final DateTime createdAt;
   final DateTime expiresAt;
   final String? qrCode;
+  final RefundRequest? refundRequest;
   bool get isPending =>
       status == 'PENDING' && expiresAt.isAfter(DateTime.now());
+  bool get canRequestRefund =>
+      status == 'CONFIRMED' &&
+      refundRequest == null &&
+      showtime.startTime.difference(DateTime.now()).inHours >= 12;
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     final seats = _list(
@@ -251,6 +257,9 @@ class Booking {
       pointsEarned: (json['pointsEarned'] as num?)?.toInt() ?? 0,
       totalPrice: _double(json['totalPrice']),
       qrCode: json['qrCode']?.toString(),
+      refundRequest: _map(json['refundRequest']).isEmpty
+          ? null
+          : RefundRequest.fromJson(_map(json['refundRequest'])),
       createdAt:
           DateTime.tryParse(_string(json['createdAt']))?.toLocal() ??
           DateTime.now(),
@@ -277,6 +286,40 @@ class Booking {
     final total = ticketFinalTotal + concessionFinalTotal - pointsUsed;
     return total < 0 ? 0 : total;
   }
+}
+
+class RefundRequest {
+  const RefundRequest({
+    required this.id,
+    required this.reason,
+    required this.status,
+    required this.refundAmount,
+    required this.createdAt,
+    this.response,
+    this.refundedAt,
+  });
+
+  final String id;
+  final String reason;
+  final String status;
+  final double refundAmount;
+  final DateTime createdAt;
+  final String? response;
+  final DateTime? refundedAt;
+
+  bool get isPending => status == 'PENDING';
+
+  factory RefundRequest.fromJson(Map<String, dynamic> json) => RefundRequest(
+    id: _id(json),
+    reason: _string(json['reason']),
+    status: _string(json['status']),
+    refundAmount: _double(json['refundAmount']),
+    response: json['response']?.toString(),
+    createdAt:
+        DateTime.tryParse(_string(json['createdAt']))?.toLocal() ??
+        DateTime.now(),
+    refundedAt: DateTime.tryParse(_string(json['refundedAt']))?.toLocal(),
+  );
 }
 
 class BookingSeatLine {

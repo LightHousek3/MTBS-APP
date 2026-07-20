@@ -93,9 +93,12 @@ class BookingApiService {
     (await _client.patch<Map<String, dynamic>>('/bookings/$id/cancel')).data!,
   );
 
-  Future<String> createPaymentUrl(String bookingId) async {
+  Future<String> createPaymentUrl(
+    String bookingId, {
+    String method = 'vnpay',
+  }) async {
     final response = await _client.post<Map<String, dynamic>>(
-      '/payments/vnpay',
+      '/payments/$method',
       data: <String, dynamic>{
         'bookingId': bookingId,
         'appReturnUrl': 'mtbs:///payment-result',
@@ -103,6 +106,28 @@ class BookingApiService {
     );
     return (response.data!['data'] as Map<String, dynamic>)['paymentUrl']!
         as String;
+  }
+
+  Future<RefundRequest> createRefundRequest({
+    required String bookingId,
+    required String reason,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/refund-requests',
+      data: <String, dynamic>{'bookingId': bookingId, 'reason': reason},
+    );
+    return RefundRequest.fromJson(
+      response.data!['data']! as Map<String, dynamic>,
+    );
+  }
+
+  Future<RefundRequest> cancelRefundRequest(String id) async {
+    final response = await _client.patch<Map<String, dynamic>>(
+      '/refund-requests/$id/cancel',
+    );
+    return RefundRequest.fromJson(
+      response.data!['data']! as Map<String, dynamic>,
+    );
   }
 
   Booking _booking(Map<String, dynamic> json) =>

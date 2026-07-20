@@ -24,6 +24,7 @@ abstract final class AppRoutePaths {
       '/theaters/$theaterId/showtimes';
   static String seats(String showtimeId) => '/booking/seats/$showtimeId';
   static String payment(String bookingId) => '/payment/$bookingId';
+  static String accountBookingHistory() => '$account?tab=bookings';
   static const services = serviceSelection;
   static String redeemDetail(String redeemId) => '/redeem/$redeemId';
   static String promotionDetail(String promotionId) =>

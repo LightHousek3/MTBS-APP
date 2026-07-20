@@ -27,6 +27,7 @@ class PaymentPage extends ConsumerStatefulWidget {
 
 class _PaymentPageState extends ConsumerState<PaymentPage> {
   Uri? _paymentUri;
+  String _paymentTitle = 'Thanh toán';
   bool _startingPayment = false;
   bool _handlingPaymentReturn = false;
   bool _webViewLoading = false;
@@ -66,7 +67,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               onPressed: _closePaymentWebView,
               icon: const Icon(Icons.arrow_back),
             ),
-            title: const Text('Thanh toán VNPay'),
+            title: Text(_paymentTitle),
           ),
           body: Stack(
             children: <Widget>[
@@ -298,7 +299,21 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               color: Colors.white,
             ),
             isLoading: _startingPayment,
-            onPressed: _startingPayment ? null : _pay,
+            onPressed: _startingPayment ? null : () => _pay('vnpay'),
+          ),
+          const SizedBox(height: 10),
+          GradientButton(
+            label: 'Thanh toán ATM nội địa qua MoMo',
+            icon: const Icon(Icons.account_balance, color: Colors.white),
+            isLoading: _startingPayment,
+            onPressed: _startingPayment ? null : () => _pay('momo'),
+          ),
+          const SizedBox(height: 10),
+          GradientButton(
+            label: 'Thanh toán ATM nội địa qua ZaloPay',
+            icon: const Icon(Icons.account_balance, color: Colors.white),
+            isLoading: _startingPayment,
+            onPressed: _startingPayment ? null : () => _pay('zalopay'),
           ),
           const SizedBox(height: 8),
           TextButton(onPressed: _cancel, child: const Text('Hủy đơn hàng')),
@@ -311,6 +326,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
+        if (booking.status == 'CONFIRMED') ...<Widget>[
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => context.go(AppRoutePaths.accountBookingHistory()),
+            icon: const Icon(Icons.history),
+            label: const Text('Xem lịch sử vé'),
+          ),
+        ],
       ],
     );
   }
@@ -368,14 +391,17 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     ),
   );
 
-  Future<void> _pay() async {
+  Future<void> _pay(String method) async {
     setState(() => _startingPayment = true);
     try {
-      final url = await ref.read(paymentUrlProvider(widget.bookingId).future);
+      final url = await ref
+          .read(bookingRepositoryProvider)
+          .createPaymentUrl(widget.bookingId, method: method);
       final paymentUri = Uri.parse(url);
       if (mounted) {
         setState(() {
           _paymentUri = paymentUri;
+          _paymentTitle = 'Thanh toán ${_paymentMethodLabel(method)}';
           _startingPayment = false;
           _webViewLoading = true;
         });
@@ -473,7 +499,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       final message = latestBooking.status == 'CONFIRMED'
           ? 'Thanh toán thành công.'
-          : 'Không thể tải cổng thanh toán VNPay. Vui lòng thử lại.';
+          : 'Không thể tải cổng thanh toán. Vui lòng thử lại.';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -545,7 +571,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   bool _isTrustedVnpayHost(String host) =>
-      host == 'sandbox.vnpayment.vn' || host.endsWith('.vnpayment.vn');
+      host == 'sandbox.vnpayment.vn' ||
+      host.endsWith('.vnpayment.vn') ||
+      host == 'test-payment.momo.vn' ||
+      host.endsWith('.momo.vn') ||
+      host == 'sb-openapi.zalopay.vn' ||
+      host.endsWith('.zalopay.vn');
 
   Future<void> _cancel() async {
     final confirmed = await showDialog<bool>(
@@ -582,6 +613,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     }
   }
 }
+
+String _paymentMethodLabel(String method) => switch (method) {
+  'momo' => 'MoMo',
+  'zalopay' => 'ZaloPay',
+  _ => 'VNPay',
+};
 
 class _ServicePriceLine extends StatelessWidget {
   const _ServicePriceLine({required this.service});

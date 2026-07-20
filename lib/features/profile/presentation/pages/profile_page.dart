@@ -29,9 +29,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   int _selectedTab = 0;
   String _bookingStatus = 'ALL';
   String _historyStatus = 'ALL';
+  String? _lastTabQuery;
   final Set<String> _cancelling = <String>{};
   final Set<String> _cancellingBookings = <String>{};
   final Set<String> _removingWaitlistMovies = <String>{};
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final tabQuery = GoRouterState.of(context).uri.queryParameters['tab'];
+    if (tabQuery == _lastTabQuery) return;
+
+    _lastTabQuery = tabQuery;
+    if (tabQuery == 'bookings') {
+      _selectedTab = 1;
+      _bookingStatus = 'ALL';
+    }
+  }
 
   Future<void> _refreshVisibleData() async {
     await ref.read(authControllerProvider.notifier).refreshUser();
@@ -851,7 +865,7 @@ class _BookingDetailDialog extends ConsumerWidget {
   }
 }
 
-class _BookingDetailContent extends StatelessWidget {
+class _BookingDetailContent extends ConsumerWidget {
   const _BookingDetailContent({
     required this.booking,
     required this.isCancelling,
@@ -863,7 +877,7 @@ class _BookingDetailContent extends StatelessWidget {
   final ValueChanged<Booking> onCancel;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final movie = booking.showtime.movie;
@@ -987,9 +1001,153 @@ class _BookingDetailContent extends StatelessWidget {
               label: const Text('Hủy vé'),
             ),
           ],
+          if (booking.status == 'CONFIRMED') ...[
+            const SizedBox(height: 12),
+            _RefundActionButton(booking: booking),
+          ],
         ],
       ),
     );
+  }
+}
+
+class _RefundActionButton extends ConsumerWidget {
+  const _RefundActionButton({required this.booking});
+
+  final Booking booking;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final refund = booking.refundRequest;
+
+    if (refund != null) {
+      return OutlinedButton.icon(
+        onPressed: () => _showRefundDetail(context, ref, refund),
+        icon: const Icon(Icons.receipt_long_outlined),
+        label: const Text('Xem yêu cầu hoàn tiền'),
+      );
+    }
+
+    if (!booking.canRequestRefund) {
+      return const SizedBox.shrink();
+    }
+
+    return OutlinedButton.icon(
+      onPressed: () => _showCreateRefundDialog(context, ref, booking),
+      icon: const Icon(Icons.currency_exchange),
+      label: const Text('Yêu cầu hoàn tiền'),
+    );
+  }
+
+  Future<void> _showCreateRefundDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Booking booking,
+  ) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Yêu cầu hoàn tiền'),
+        content: TextField(
+          controller: controller,
+          minLines: 3,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            labelText: 'Lý do',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Gửi yêu cầu'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (!context.mounted || reason == null) return;
+    if (reason.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập lý do ít nhất 5 ký tự.')),
+      );
+      return;
+    }
+
+    try {
+      await ref
+          .read(bookingRepositoryProvider)
+          .createRefundRequest(bookingId: booking.id, reason: reason);
+      ref
+        ..invalidate(bookingDetailsProvider(booking.id))
+        ..invalidate(bookingHistoryProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã gửi yêu cầu hoàn tiền.')),
+      );
+    } catch (error) {
+      if (context.mounted) showAppErrorSnackBar(context, error);
+    }
+  }
+
+  Future<void> _showRefundDetail(
+    BuildContext context,
+    WidgetRef ref,
+    RefundRequest refund,
+  ) async {
+    final cancel = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Yêu cầu hoàn tiền'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Trạng thái: ${_refundStatusText(refund.status)}'),
+            const SizedBox(height: 8),
+            Text('Số tiền: ${_money(refund.refundAmount)}'),
+            const SizedBox(height: 8),
+            Text('Lý do: ${refund.reason}'),
+            if (refund.response?.isNotEmpty == true) ...[
+              const SizedBox(height: 8),
+              Text('Phản hồi: ${refund.response}'),
+            ],
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Đóng'),
+          ),
+          if (refund.isPending)
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Hủy yêu cầu'),
+            ),
+        ],
+      ),
+    );
+
+    if (cancel != true || !context.mounted) return;
+
+    try {
+      await ref.read(bookingRepositoryProvider).cancelRefundRequest(refund.id);
+      ref
+        ..invalidate(bookingDetailsProvider(booking.id))
+        ..invalidate(bookingHistoryProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã hủy yêu cầu hoàn tiền.')),
+      );
+    } catch (error) {
+      if (context.mounted) showAppErrorSnackBar(context, error);
+    }
   }
 }
 
@@ -1820,6 +1978,14 @@ String _shortBookingCode(String id) {
   if (id.length <= 10) return id;
   return id.substring(id.length - 10);
 }
+
+String _refundStatusText(String status) => switch (status) {
+  'PENDING' => 'Chờ xử lý',
+  'APPROVED' => 'Đã hoàn tiền',
+  'REJECTED' => 'Đã từ chối',
+  'CANCELLED' => 'Đã hủy',
+  _ => status,
+};
 
 String _money(num value) =>
     NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(value);
