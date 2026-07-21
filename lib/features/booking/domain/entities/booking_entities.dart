@@ -326,6 +326,26 @@ class RefundRequest {
   );
 }
 
+class PaymentSession {
+  const PaymentSession({
+    required this.paymentUrl,
+    this.paymentId,
+    this.expiresAt,
+    this.serverTime,
+  });
+
+  final String paymentUrl;
+  final String? paymentId;
+  final DateTime? expiresAt;
+  final DateTime? serverTime;
+
+  Duration? get remainingDuration {
+    if (expiresAt == null || serverTime == null) return null;
+    final remaining = expiresAt!.difference(serverTime!);
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+}
+
 class BookingSeatLine {
   const BookingSeatLine({
     required this.number,

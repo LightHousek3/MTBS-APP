@@ -96,6 +96,12 @@ class BookingApiService {
   Future<String> createPaymentUrl(
     String bookingId, {
     String method = 'vnpay',
+  }) async =>
+      (await createPaymentSession(bookingId, method: method)).paymentUrl;
+
+  Future<PaymentSession> createPaymentSession(
+    String bookingId, {
+    String method = 'vnpay',
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/payments/$method',
@@ -104,8 +110,25 @@ class BookingApiService {
         'appReturnUrl': 'mtbs:///payment-result',
       },
     );
-    return (response.data!['data'] as Map<String, dynamic>)['paymentUrl']!
-        as String;
+    final data = response.data!['data']! as Map<String, dynamic>;
+    return PaymentSession(
+      paymentUrl: data['paymentUrl']! as String,
+      paymentId: data['paymentId']?.toString(),
+      expiresAt: DateTime.tryParse(
+        data['expiresAt']?.toString() ?? '',
+      )?.toLocal(),
+      serverTime: DateTime.tryParse(
+        data['serverTime']?.toString() ?? '',
+      )?.toLocal(),
+    );
+  }
+
+  Future<bool> expireMomoPayment(String paymentId) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/payments/momo/$paymentId/expire',
+    );
+    final data = response.data!['data']! as Map<String, dynamic>;
+    return data['expired'] == true;
   }
 
   Future<RefundRequest> createRefundRequest({
