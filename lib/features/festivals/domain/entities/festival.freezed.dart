@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Festival {
 
- String get id; String get title; String get subtitle; String? get imageUrl;
+ String get id; String get title; String get subtitle; String? get content; String? get imageUrl; String? get category; String? get location; String? get status; DateTime? get startTime; DateTime? get endTime; DateTime? get createdAt;
 /// Create a copy of Festival
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $FestivalCopyWith<Festival> get copyWith => _$FestivalCopyWithImpl<Festival>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Festival&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Festival&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.location, location) || other.location == location)&&(identical(other.status, status) || other.status == status)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,subtitle,imageUrl);
+int get hashCode => Object.hash(runtimeType,id,title,subtitle,content,imageUrl,category,location,status,startTime,endTime,createdAt);
 
 @override
 String toString() {
-  return 'Festival(id: $id, title: $title, subtitle: $subtitle, imageUrl: $imageUrl)';
+  return 'Festival(id: $id, title: $title, subtitle: $subtitle, content: $content, imageUrl: $imageUrl, category: $category, location: $location, status: $status, startTime: $startTime, endTime: $endTime, createdAt: $createdAt)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $FestivalCopyWith<$Res>  {
   factory $FestivalCopyWith(Festival value, $Res Function(Festival) _then) = _$FestivalCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String subtitle, String? imageUrl
+ String id, String title, String subtitle, String? content, String? imageUrl, String? category, String? location, String? status, DateTime? startTime, DateTime? endTime, DateTime? createdAt
 });
 
 
@@ -62,13 +62,20 @@ class _$FestivalCopyWithImpl<$Res>
 
 /// Create a copy of Festival
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? imageUrl = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? content = freezed,Object? imageUrl = freezed,Object? category = freezed,Object? location = freezed,Object? status = freezed,Object? startTime = freezed,Object? endTime = freezed,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,subtitle: null == subtitle ? _self.subtitle : subtitle // ignore: cast_nullable_to_non_nullable
-as String,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String,content: freezed == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String?,location: freezed == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
+as String?,status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
+as DateTime?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
+as DateTime?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -153,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? imageUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? content,  String? imageUrl,  String? category,  String? location,  String? status,  DateTime? startTime,  DateTime? endTime,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Festival() when $default != null:
-return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
+return $default(_that.id,_that.title,_that.subtitle,_that.content,_that.imageUrl,_that.category,_that.location,_that.status,_that.startTime,_that.endTime,_that.createdAt);case _:
   return orElse();
 
 }
@@ -174,10 +181,10 @@ return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? imageUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? content,  String? imageUrl,  String? category,  String? location,  String? status,  DateTime? startTime,  DateTime? endTime,  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Festival():
-return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
+return $default(_that.id,_that.title,_that.subtitle,_that.content,_that.imageUrl,_that.category,_that.location,_that.status,_that.startTime,_that.endTime,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +201,10 @@ return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String subtitle,  String? imageUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String subtitle,  String? content,  String? imageUrl,  String? category,  String? location,  String? status,  DateTime? startTime,  DateTime? endTime,  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Festival() when $default != null:
-return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
+return $default(_that.id,_that.title,_that.subtitle,_that.content,_that.imageUrl,_that.category,_that.location,_that.status,_that.startTime,_that.endTime,_that.createdAt);case _:
   return null;
 
 }
@@ -209,13 +216,20 @@ return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
 
 
 class _Festival implements Festival {
-  const _Festival({required this.id, required this.title, required this.subtitle, this.imageUrl});
+  const _Festival({required this.id, required this.title, required this.subtitle, this.content, this.imageUrl, this.category, this.location, this.status, this.startTime, this.endTime, this.createdAt});
   
 
 @override final  String id;
 @override final  String title;
 @override final  String subtitle;
+@override final  String? content;
 @override final  String? imageUrl;
+@override final  String? category;
+@override final  String? location;
+@override final  String? status;
+@override final  DateTime? startTime;
+@override final  DateTime? endTime;
+@override final  DateTime? createdAt;
 
 /// Create a copy of Festival
 /// with the given fields replaced by the non-null parameter values.
@@ -227,16 +241,16 @@ _$FestivalCopyWith<_Festival> get copyWith => __$FestivalCopyWithImpl<_Festival>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Festival&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Festival&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.location, location) || other.location == location)&&(identical(other.status, status) || other.status == status)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,subtitle,imageUrl);
+int get hashCode => Object.hash(runtimeType,id,title,subtitle,content,imageUrl,category,location,status,startTime,endTime,createdAt);
 
 @override
 String toString() {
-  return 'Festival(id: $id, title: $title, subtitle: $subtitle, imageUrl: $imageUrl)';
+  return 'Festival(id: $id, title: $title, subtitle: $subtitle, content: $content, imageUrl: $imageUrl, category: $category, location: $location, status: $status, startTime: $startTime, endTime: $endTime, createdAt: $createdAt)';
 }
 
 
@@ -247,7 +261,7 @@ abstract mixin class _$FestivalCopyWith<$Res> implements $FestivalCopyWith<$Res>
   factory _$FestivalCopyWith(_Festival value, $Res Function(_Festival) _then) = __$FestivalCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String subtitle, String? imageUrl
+ String id, String title, String subtitle, String? content, String? imageUrl, String? category, String? location, String? status, DateTime? startTime, DateTime? endTime, DateTime? createdAt
 });
 
 
@@ -264,13 +278,20 @@ class __$FestivalCopyWithImpl<$Res>
 
 /// Create a copy of Festival
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? imageUrl = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? content = freezed,Object? imageUrl = freezed,Object? category = freezed,Object? location = freezed,Object? status = freezed,Object? startTime = freezed,Object? endTime = freezed,Object? createdAt = freezed,}) {
   return _then(_Festival(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,subtitle: null == subtitle ? _self.subtitle : subtitle // ignore: cast_nullable_to_non_nullable
-as String,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String,content: freezed == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String?,location: freezed == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
+as String?,status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
+as DateTime?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
+as DateTime?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

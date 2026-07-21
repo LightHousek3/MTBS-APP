@@ -1,22 +1,20 @@
+import 'package:mtbs_app/features/festivals/data/services/festival_api_service.dart';
 import 'package:mtbs_app/features/festivals/domain/entities/festival.dart';
 import 'package:mtbs_app/features/festivals/domain/repositories/festival_repository.dart';
 
 class FestivalRepositoryImpl implements FestivalRepository {
-  const FestivalRepositoryImpl();
+  const FestivalRepositoryImpl(this._apiService);
+
+  final FestivalApiService _apiService;
 
   @override
   Future<List<Festival>> getFestivals({int limit = 10}) async {
-    return const <Festival>[
-      Festival(
-        id: 'family-film-week',
-        title: 'Festival',
-        subtitle: 'Tuần lễ phim gia đình tại MTBS',
-      ),
-      Festival(
-        id: 'movie-weekend',
-        title: 'Movie Weekend',
-        subtitle: 'Ưu đãi đặc biệt cho nhóm bạn',
-      ),
-    ].take(limit).toList(growable: false);
+    try {
+      final festivalList = await _apiService.getFestivals(limit: limit);
+      if (festivalList.isNotEmpty) {
+        return festivalList;
+      }
+    } catch (_) {}
+    return const <Festival>[];
   }
 }
