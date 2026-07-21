@@ -26,4 +26,5 @@ abstract class AuthUser with _$AuthUser {
 
 extension AuthUserX on AuthUser {
   String get fullName => '$firstName $lastName'.trim();
+  bool get canUseMobileApp => role.toUpperCase() == 'USER';
 }

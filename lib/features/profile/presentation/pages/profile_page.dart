@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -162,10 +164,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  void _handleRefundChanged(String bookingId, String successMessage) {
-    ref
-      ..invalidate(bookingDetailsProvider(bookingId))
-      ..invalidate(bookingHistoryProvider(_bookingStatus));
+  void _handleRefundChanged(String _, String successMessage) {
+    ref.invalidate(bookingHistoryProvider(_bookingStatus));
 
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -1386,6 +1386,13 @@ class _BookingDetailContent extends ConsumerWidget {
             ),
           ],
           if (booking.status == 'CONFIRMED') ...[
+            if (booking.qrCode?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: 14),
+              _TicketQrCard(
+                bookingId: booking.id,
+                qrCode: booking.qrCode!.trim(),
+              ),
+            ],
             const SizedBox(height: 12),
             _RefundActionButton(
               booking: booking,
@@ -1394,6 +1401,99 @@ class _BookingDetailContent extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _TicketQrCard extends StatelessWidget {
+  const _TicketQrCard({required this.bookingId, required this.qrCode});
+
+  final String bookingId;
+  final String qrCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.qr_code_2_rounded, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Mã QR vé',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: _TicketQrImage(qrCode: qrCode),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Đưa mã này cho nhân viên để kiểm tra vé #${_shortBookingCode(bookingId)}.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TicketQrImage extends StatelessWidget {
+  const _TicketQrImage({required this.qrCode});
+
+  final String qrCode;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 190.0;
+    final commaIndex = qrCode.indexOf(',');
+
+    if (!qrCode.startsWith('data:image') || commaIndex == -1) {
+      return SizedBox(
+        width: size,
+        child: SelectableText(
+          qrCode,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
+      );
+    }
+
+    return Image.memory(
+      base64Decode(qrCode.substring(commaIndex + 1)),
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
     );
   }
 }
@@ -2409,7 +2509,6 @@ String _bookingDisplayStatus(Booking booking) {
   final refundStatus = booking.refundRequest?.status;
   if (refundStatus == 'PENDING') return 'REFUND_PENDING';
   if (refundStatus == 'APPROVED') return 'REFUNDED';
-  if (refundStatus == 'REJECTED') return 'CANCELLED';
   return booking.status;
 }
 
