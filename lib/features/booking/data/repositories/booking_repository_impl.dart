@@ -35,6 +35,14 @@ class BookingRepositoryImpl implements BookingRepository {
   Future<String> createPaymentUrl(String id, {String method = 'vnpay'}) =>
       _api.createPaymentUrl(id, method: method);
   @override
+  Future<PaymentSession> createPaymentSession(
+    String id, {
+    String method = 'vnpay',
+  }) => _api.createPaymentSession(id, method: method);
+  @override
+  Future<bool> expireMomoPayment(String paymentId) =>
+      _api.expireMomoPayment(paymentId);
+  @override
   Future<RefundRequest> createRefundRequest({
     required String bookingId,
     required String reason,

@@ -31,7 +31,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   bool _startingPayment = false;
   bool _handlingPaymentReturn = false;
   bool _webViewLoading = false;
+  bool _expiringPayment = false;
   String? _lastHandledResultKey;
+  String? _activeMomoPaymentId;
+  Timer? _paymentCountdownTimer;
+  InAppWebViewController? _webViewController;
 
   @override
   void initState() {
@@ -49,6 +53,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         unawaited(_consumeIncomingResult(widget.initialResult));
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _paymentCountdownTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -79,7 +89,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   supportZoom: false,
                   transparentBackground: false,
                 ),
+                onWebViewCreated: (controller) {
+                  _webViewController = controller;
+                },
                 onLoadStart: (_, url) {
+                  if (_expiringPayment) return;
                   if (_tryHandlePaymentUri(url)) {
                     return;
                   }
@@ -88,6 +102,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   }
                 },
                 onLoadStop: (_, url) {
+                  if (_expiringPayment) return;
                   if (_tryHandlePaymentUri(url)) {
                     return;
                   }
@@ -394,10 +409,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   Future<void> _pay(String method) async {
     setState(() => _startingPayment = true);
     try {
-      final url = await ref
+      final session = await ref
           .read(bookingRepositoryProvider)
-          .createPaymentUrl(widget.bookingId, method: method);
-      final paymentUri = Uri.parse(url);
+          .createPaymentSession(widget.bookingId, method: method);
+      final paymentUri = Uri.parse(session.paymentUrl);
       if (mounted) {
         setState(() {
           _paymentUri = paymentUri;
@@ -405,6 +420,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           _startingPayment = false;
           _webViewLoading = true;
         });
+        if (method == 'momo') {
+          _startMomoCountdown(session);
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -433,6 +451,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       return;
     }
     _handlingPaymentReturn = true;
+    _stopPaymentCountdown();
 
     try {
       setState(() {
@@ -477,10 +496,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   Future<void> _handleWebViewError(String description) async {
-    if (!mounted || _handlingPaymentReturn) {
+    if (!mounted || _handlingPaymentReturn || _expiringPayment) {
       return;
     }
     _handlingPaymentReturn = true;
+    _stopPaymentCountdown();
 
     try {
       setState(() {
@@ -543,6 +563,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     if (!mounted || _paymentUri == null) {
       return;
     }
+    _stopPaymentCountdown();
     setState(() {
       _paymentUri = null;
       _webViewLoading = false;
@@ -564,10 +585,81 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     if (uri.scheme == 'mtbs' &&
         uri.host.isEmpty &&
         uri.path == '/payment-result') {
+      if (_expiringPayment) return true;
       unawaited(_handlePaymentReturn(uri));
       return true;
     }
     return false;
+  }
+
+  void _startMomoCountdown(PaymentSession session) {
+    _paymentCountdownTimer?.cancel();
+    final paymentId = session.paymentId;
+    final remaining = session.remainingDuration;
+    if (paymentId == null || remaining == null) return;
+
+    _activeMomoPaymentId = paymentId;
+    if (remaining.inMilliseconds <= 0) {
+      unawaited(_expireMomoPayment());
+      return;
+    }
+
+    _paymentCountdownTimer = Timer(remaining, () {
+      if (mounted) unawaited(_expireMomoPayment());
+    });
+  }
+
+  void _stopPaymentCountdown() {
+    _paymentCountdownTimer?.cancel();
+    _paymentCountdownTimer = null;
+    _activeMomoPaymentId = null;
+    _webViewController = null;
+  }
+
+  Future<void> _expireMomoPayment() async {
+    final paymentId = _activeMomoPaymentId;
+    if (!mounted ||
+        paymentId == null ||
+        _expiringPayment ||
+        _handlingPaymentReturn) {
+      return;
+    }
+    _expiringPayment = true;
+    _paymentCountdownTimer?.cancel();
+
+    try {
+      await _webViewController?.stopLoading();
+    } catch (_) {
+      // The WebView may already be closing when the timer reaches zero.
+    }
+
+    if (mounted) {
+      setState(() {
+        _paymentUri = null;
+        _webViewLoading = false;
+      });
+    }
+
+    try {
+      final expired = await ref
+          .read(bookingRepositoryProvider)
+          .expireMomoPayment(paymentId);
+      ref.invalidate(bookingDetailsProvider(widget.bookingId));
+      await ref.read(pendingBookingControllerProvider.notifier).refresh();
+      if (mounted) {
+        final message = expired
+            ? 'Đơn hàng đã hết thời gian thanh toán. Vui lòng đặt vé lại.'
+            : 'Giao dịch đã được xử lý thành công.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (error) {
+      if (mounted) showAppErrorSnackBar(context, error);
+    } finally {
+      _stopPaymentCountdown();
+      _expiringPayment = false;
+    }
   }
 
   bool _isTrustedVnpayHost(String host) =>
