@@ -12,8 +12,12 @@ import 'package:mtbs_app/features/auth/presentation/view_models/auth_controller.
 import 'package:mtbs_app/features/booking/presentation/pages/payment_page.dart';
 import 'package:mtbs_app/features/booking/presentation/pages/seat_selection_page.dart';
 import 'package:mtbs_app/features/booking/presentation/pages/service_selection_page.dart';
+import 'package:mtbs_app/features/festivals/presentation/pages/festival_detail_page.dart';
+import 'package:mtbs_app/features/festivals/presentation/pages/festival_list_page.dart';
 import 'package:mtbs_app/features/home/presentation/pages/home_page.dart';
 import 'package:mtbs_app/features/movies/presentation/pages/movie_detail_page.dart';
+import 'package:mtbs_app/features/news/presentation/pages/news_detail_page.dart';
+import 'package:mtbs_app/features/news/presentation/pages/news_list_page.dart';
 import 'package:mtbs_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:mtbs_app/features/promotions/presentation/pages/promotion_detail_page.dart';
 import 'package:mtbs_app/features/promotions/presentation/pages/promotion_list_page.dart';
@@ -111,6 +115,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutePaths.home,
                 builder: (_, _) => const HomePage(),
+              ),
+              GoRoute(
+                path: AppRoutePaths.news,
+                builder: (_, _) => const NewsListPage(),
+              ),
+              GoRoute(
+                path: AppRoutePaths.newsDetailPath,
+                builder: (_, state) => NewsDetailPage(
+                  newsId: state.pathParameters['newsId']!,
+                ),
+              ),
+              GoRoute(
+                path: AppRoutePaths.festivals,
+                builder: (_, _) => const FestivalListPage(),
+              ),
+              GoRoute(
+                path: AppRoutePaths.festivalDetailPath,
+                builder: (_, state) => FestivalDetailPage(
+                  festivalId: state.pathParameters['festivalId']!,
+                ),
               ),
             ],
           ),

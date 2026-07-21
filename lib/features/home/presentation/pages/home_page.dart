@@ -626,7 +626,11 @@ class _PromotionCarousel extends StatelessWidget {
           ),
         )
         .toList(growable: false);
-    return _StoryCarousel(title: 'Khuyến mãi', stories: stories);
+    return _StoryCarousel(
+      title: 'Khuyến mãi',
+      stories: stories,
+      onHeaderTap: () => context.push(AppRoutePaths.promotions),
+    );
   }
 }
 
@@ -645,10 +649,15 @@ class _NewsCarousel extends StatelessWidget {
             icon: Icons.newspaper,
             color: const Color(0xFF2563EB),
             imageUrl: item.imageUrl,
+            onTap: () => context.push(AppRoutePaths.newsDetail(item.id)),
           ),
         )
         .toList(growable: false);
-    return _StoryCarousel(title: 'News', stories: stories);
+    return _StoryCarousel(
+      title: 'Tin tức',
+      stories: stories,
+      onHeaderTap: () => context.push(AppRoutePaths.news),
+    );
   }
 }
 
@@ -667,35 +676,55 @@ class _FestivalCarousel extends StatelessWidget {
             icon: Icons.celebration,
             color: const Color(0xFFF97316),
             imageUrl: item.imageUrl,
+            onTap: () => context.push(AppRoutePaths.festivalDetail(item.id)),
           ),
         )
         .toList(growable: false);
-    return _StoryCarousel(title: 'Festival', stories: stories);
+    return _StoryCarousel(
+      title: 'Sự kiện',
+      stories: stories,
+      onHeaderTap: () => context.push(AppRoutePaths.festivals),
+    );
   }
 }
 
 class _StoryCarousel extends StatelessWidget {
-  const _StoryCarousel({required this.title, required this.stories});
+  const _StoryCarousel({
+    required this.title,
+    required this.stories,
+    this.onHeaderTap,
+  });
 
   final String title;
   final List<_StoryCardData> stories;
+  final VoidCallback? onHeaderTap;
 
   @override
   Widget build(BuildContext context) {
     if (stories.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(top: 26),
+      padding: const EdgeInsets.only(top: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+                if (onHeaderTap != null)
+                  TextButton(
+                    onPressed: onHeaderTap,
+                    child: const Text('Xem tất cả'),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           SizedBox(
-            height: 148,
+            height: 162,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               scrollDirection: Axis.horizontal,
@@ -735,44 +764,101 @@ class _StoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(22),
+    borderRadius: BorderRadius.circular(16),
     onTap: data.onTap,
-    child: Ink(
-      width: 230,
-      padding: const EdgeInsets.all(18),
+    child: Container(
+      width: 220,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[data.color, data.color.withValues(alpha: 0.45)],
-        ),
-        image: data.imageUrl == null
-            ? null
-            : DecorationImage(
-                image: NetworkImage(data.imageUrl!),
-                fit: BoxFit.cover,
-                colorFilter: const ColorFilter.mode(
-                  Color(0xAA000000),
-                  BlendMode.darken,
-                ),
-              ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(data.icon, size: 34),
-          const Spacer(),
-          Text(
-            data.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+        color: const Color(0xFF161822),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(height: 4),
-          Text(data.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ],
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          // Brighter Background Image
+          if (data.imageUrl != null && data.imageUrl!.isNotEmpty)
+            Image.network(
+              data.imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  Container(color: const Color(0xFF1C1E26)),
+            )
+          else
+            Container(color: const Color(0xFF1C1E26)),
+
+          // Brighter Gradient Overlay: Subtle transition at the bottom
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[
+                  Color(0x22000000),
+                  Color(0x55000000),
+                  Color(0xF50B0C10),
+                ],
+                stops: <double>[0.0, 0.45, 1.0],
+              ),
+            ),
+          ),
+
+          // Icon Badge (Top Left)
+          Positioned(
+            top: 10,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.45),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              ),
+              child: Icon(data.icon, size: 16, color: Colors.white),
+            ),
+          ),
+
+          // Bottom Text Content
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  data.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13.5,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  data.subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     ),
@@ -812,6 +898,16 @@ class _HomeDrawer extends StatelessWidget {
             leading: const Icon(Icons.card_giftcard),
             title: const Text('Khuyến Mãi'),
             onTap: () => context.go(AppRoutePaths.promotions),
+          ),
+          ListTile(
+            leading: const Icon(Icons.newspaper),
+            title: const Text('Tin tức'),
+            onTap: () => context.go(AppRoutePaths.news),
+          ),
+          ListTile(
+            leading: const Icon(Icons.celebration),
+            title: const Text('Sự kiện'),
+            onTap: () => context.go(AppRoutePaths.festivals),
           ),
           ListTile(
             leading: const Icon(Icons.person),
