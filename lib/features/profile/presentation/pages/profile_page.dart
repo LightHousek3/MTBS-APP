@@ -196,6 +196,369 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  Future<void> _showProfileEditor(
+    BuildContext context,
+    WidgetRef ref,
+    AuthUser? currentUser,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final firstNameController = TextEditingController(
+      text: currentUser?.firstName ?? '',
+    );
+    final lastNameController = TextEditingController(
+      text: currentUser?.lastName ?? '',
+    );
+    final phoneController = TextEditingController(text: currentUser?.phone ?? '');
+    final addressController = TextEditingController(
+      text: currentUser?.address ?? '',
+    );
+    final ageController = TextEditingController(
+      text: currentUser?.age?.toString() ?? '',
+    );
+    var selectedGender = currentUser?.gender ?? 'OTHER';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final colorScheme = theme.colorScheme;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: colorScheme.surface,
+          surfaceTintColor: colorScheme.surfaceTint,
+          title: const Text('Cập nhật hồ sơ'),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    'Giữ thông tin hồ sơ luôn chính xác để sử dụng dịch vụ nhanh và an toàn.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  TextFormField(
+                    controller: firstNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Tên',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: lastNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Họ',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'Số điện thoại',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: addressController,
+                    decoration: InputDecoration(
+                      labelText: 'Địa chỉ',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: ageController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Tuổi',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) return null;
+                      final age = int.tryParse(value.trim());
+                      if (age == null || age <= 0) {
+                        return 'Tuổi không hợp lệ';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedGender,
+                    decoration: InputDecoration(
+                      labelText: 'Giới tính',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                    items: const <DropdownMenuItem<String>>[
+                      DropdownMenuItem(value: 'MALE', child: Text('Nam')),
+                      DropdownMenuItem(value: 'FEMALE', child: Text('Nữ')),
+                      DropdownMenuItem(value: 'OTHER', child: Text('Khác')),
+                    ],
+                    onChanged: (value) {
+                      selectedGender = value ?? 'OTHER';
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) return;
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Lưu'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != true || !context.mounted) return;
+
+    final success = await ref.read(authControllerProvider.notifier).updateProfile(
+      firstName: firstNameController.text.trim().isEmpty
+          ? null
+          : firstNameController.text.trim(),
+      lastName: lastNameController.text.trim().isEmpty
+          ? null
+          : lastNameController.text.trim(),
+      phone: phoneController.text.trim().isEmpty
+          ? null
+          : phoneController.text.trim(),
+      address: addressController.text.trim().isEmpty
+          ? null
+          : addressController.text.trim(),
+      age: int.tryParse(ageController.text.trim()),
+      gender: selectedGender,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Đã cập nhật hồ sơ.' : 'Không thể cập nhật hồ sơ.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showChangePasswordDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final colorScheme = theme.colorScheme;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: colorScheme.surface,
+          surfaceTintColor: colorScheme.surfaceTint,
+          title: const Text('Đổi mật khẩu'),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          content: Form(
+            key: formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  'Nhập mật khẩu hiện tại và tạo mật khẩu mới an toàn.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: currentPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Mật khẩu hiện tại',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Nhập mật khẩu hiện tại';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Mật khẩu mới',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Nhập mật khẩu mới';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Xác nhận mật khẩu mới',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceVariant.withAlpha(20),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Xác nhận mật khẩu mới';
+                    }
+                    if (value != newPasswordController.text) {
+                      return 'Mật khẩu không khớp';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) return;
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Lưu'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != true || !context.mounted) return;
+
+    if (newPasswordController.text != confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mật khẩu xác nhận không khớp.')),
+      );
+      return;
+    }
+
+    final success = await ref.read(authControllerProvider.notifier).changePassword(
+      currentPassword: currentPasswordController.text,
+      newPassword: newPasswordController.text,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Đổi mật khẩu thành công.' : 'Không thể đổi mật khẩu.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -241,13 +604,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                     const SizedBox(height: 18),
                     if (_selectedTab == 0) ...[
-                      _InfoSection(user: user),
-                      const SizedBox(height: 18),
-                      _ActionSection(
-                        onRedeem: () => context.push(AppRoutePaths.redeems),
-                        onLogout: () =>
-                            ref.read(authControllerProvider.notifier).logout(),
-                      ),
+                      _InfoSection(
+                      user: user,
+                      onEditProfile: () async {
+                        await _showProfileEditor(context, ref, user);
+                        await ref.read(authControllerProvider.notifier).refreshUser();
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    _ActionSection(
+                      onRedeem: () => context.push(AppRoutePaths.redeems),
+                      onManageUsers: user.role == 'ADMIN'
+                          ? () => context.push(AppRoutePaths.adminUsers)
+                          : null,
+                      onEditProfile: () async {
+                        await _showProfileEditor(context, ref, user);
+                        await ref.read(authControllerProvider.notifier).refreshUser();
+                      },
+                      onChangePassword: () async {
+                        await _showChangePasswordDialog(context, ref);
+                      },
+                      onLogout: () =>
+                          ref.read(authControllerProvider.notifier).logout(),
+                    ),
                     ] else if (_selectedTab == 1) ...[
                       _BookingHistorySection(
                         status: _bookingStatus,
@@ -551,19 +930,22 @@ class _ProfileTab extends StatelessWidget {
 }
 
 class _InfoSection extends StatelessWidget {
-  const _InfoSection({required this.user});
+  const _InfoSection({required this.user, this.onEditProfile});
 
   final AuthUser? user;
+  final VoidCallback? onEditProfile;
 
   @override
   Widget build(BuildContext context) {
     return _ProfileSection(
       title: 'Thông tin cá nhân',
-      trailing: TextButton.icon(
-        onPressed: null,
-        icon: const Icon(Icons.edit_outlined, size: 18),
-        label: const Text('Chỉnh sửa'),
-      ),
+      trailing: onEditProfile == null
+          ? const SizedBox.shrink()
+          : IconButton(
+              onPressed: onEditProfile,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              tooltip: 'Chỉnh sửa',
+            ),
       children: <Widget>[
         _InfoRow(
           icon: Icons.badge_outlined,
@@ -1822,9 +2204,18 @@ class _ComingSoonSection extends StatelessWidget {
 }
 
 class _ActionSection extends StatelessWidget {
-  const _ActionSection({required this.onRedeem, required this.onLogout});
+  const _ActionSection({
+    required this.onRedeem,
+    required this.onManageUsers,
+    required this.onEditProfile,
+    required this.onChangePassword,
+    required this.onLogout,
+  });
 
   final VoidCallback? onRedeem;
+  final VoidCallback? onManageUsers;
+  final VoidCallback? onEditProfile;
+  final VoidCallback? onChangePassword;
   final VoidCallback? onLogout;
 
   @override
@@ -1832,14 +2223,30 @@ class _ActionSection extends StatelessWidget {
     return _ProfileSection(
       title: 'Tiện ích tài khoản',
       children: <Widget>[
-        const _MenuRow(icon: Icons.settings_outlined, title: 'Cài đặt'),
+        _MenuRow(
+          icon: Icons.person_outline_rounded,
+          title: 'Cập nhật hồ sơ',
+          onTap: onEditProfile,
+          enabled: onEditProfile != null,
+        ),
         _MenuRow(
           icon: Icons.card_giftcard_outlined,
           title: 'Đổi quà thân thiết',
           onTap: onRedeem,
           enabled: onRedeem != null,
         ),
-        const _MenuRow(icon: Icons.lock_outline_rounded, title: 'Đổi mật khẩu'),
+        _MenuRow(
+          icon: Icons.lock_outline_rounded,
+          title: 'Đổi mật khẩu',
+          onTap: onChangePassword,
+          enabled: onChangePassword != null,
+        ),
+        _MenuRow(
+          icon: Icons.admin_panel_settings_outlined,
+          title: 'Quản lý người dùng',
+          onTap: onManageUsers,
+          enabled: onManageUsers != null,
+        ),
         const _MenuRow(
           icon: Icons.help_outline_rounded,
           title: 'Trợ giúp & Hỗ trợ',
@@ -1894,7 +2301,7 @@ class _ProfileSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                ?trailing,
+                trailing ?? const SizedBox.shrink(),
               ],
             ),
           ),
@@ -1960,8 +2367,8 @@ class _MenuRow extends StatelessWidget {
     final tint = destructive
         ? colorScheme.error
         : enabled
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
+            ? colorScheme.primary
+            : colorScheme.onSurfaceVariant;
 
     return ListTile(
       enabled: enabled,
@@ -1981,8 +2388,14 @@ class _MenuRow extends StatelessWidget {
             )
           : null,
       minLeadingWidth: 24,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18),
       visualDensity: VisualDensity.compact,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      tileColor: enabled
+          ? colorScheme.surfaceVariant.withAlpha(20)
+          : null,
     );
   }
 }

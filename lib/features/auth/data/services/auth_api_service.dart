@@ -93,6 +93,69 @@ class AuthApiService {
     ).message;
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _client.patch<Map<String, dynamic>>(
+      '/users/me/change-password',
+      data: <String, dynamic>{
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+    );
+  }
+
+  Future<AuthUser> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? address,
+    String? phone,
+    int? age,
+    String? gender,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (firstName != null) payload['firstName'] = firstName;
+    if (lastName != null) payload['lastName'] = lastName;
+    if (address != null) payload['address'] = address;
+    if (phone != null) payload['phone'] = phone;
+    if (age != null) payload['age'] = age;
+    if (gender != null) payload['gender'] = gender;
+
+    final response = await _client.patch<Map<String, dynamic>>(
+      '/users/me/profile',
+      data: payload,
+    );
+    return ApiResponse<AuthUser>.fromJson(
+      response.data!,
+      (json) => AuthUser.fromJson(json! as Map<String, dynamic>),
+    ).data!;
+  }
+
+  Future<List<AuthUser>> getUsers() async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/users');
+    return ApiResponse<List<AuthUser>>.fromJson(
+      response.data!,
+      (json) => (json as List<dynamic>)
+          .map((item) => AuthUser.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    ).data ?? <AuthUser>[];
+  }
+
+  Future<AuthUser> changeUserStatus({
+    required String userId,
+    required String status,
+  }) async {
+    final response = await _client.patch<Map<String, dynamic>>(
+      '/admin/users/$userId/status',
+      data: <String, dynamic>{'status': status},
+    );
+    return ApiResponse<AuthUser>.fromJson(
+      response.data!,
+      (json) => AuthUser.fromJson(json! as Map<String, dynamic>),
+    ).data!;
+  }
+
   Future<RefreshSession> refresh(String refreshToken) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/auth/refresh-token',

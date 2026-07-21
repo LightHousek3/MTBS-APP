@@ -116,6 +116,41 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<String> forgotPassword(String email) => _service.forgotPassword(email);
 
   @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) => _service.changePassword(
+    currentPassword: currentPassword,
+    newPassword: newPassword,
+  );
+
+  @override
+  Future<AuthUser> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? address,
+    String? phone,
+    int? age,
+    String? gender,
+  }) => _service.updateProfile(
+    firstName: firstName,
+    lastName: lastName,
+    address: address,
+    phone: phone,
+    age: age,
+    gender: gender,
+  );
+
+  @override
+  Future<List<AuthUser>> getUsers() => _service.getUsers();
+
+  @override
+  Future<AuthUser> changeUserStatus({
+    required String userId,
+    required String status,
+  }) => _service.changeUserStatus(userId: userId, status: status);
+
+  @override
   Future<void> logout() async {
     final refreshToken = _sessionStore.refreshToken;
     try {

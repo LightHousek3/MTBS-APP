@@ -17,6 +17,23 @@ abstract interface class AuthRepository {
   Future<void> verifyEmail({required String email, required String code});
   Future<void> resendVerification(String email);
   Future<String> forgotPassword(String email);
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+  Future<AuthUser> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? address,
+    String? phone,
+    int? age,
+    String? gender,
+  });
+  Future<List<AuthUser>> getUsers();
+  Future<AuthUser> changeUserStatus({
+    required String userId,
+    required String status,
+  });
   Future<AuthUser?> restoreSession();
   Future<AuthUser> getCurrentUser();
   Future<void> logout();
