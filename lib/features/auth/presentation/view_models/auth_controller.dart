@@ -145,6 +145,70 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     }
   }
 
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      await _repository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      state = AsyncData(_currentUser);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? address,
+    String? phone,
+    int? age,
+    String? gender,
+  }) async {
+    final previousUser = _currentUser;
+    state = const AsyncLoading();
+    try {
+      final updatedUser = await _repository.updateProfile(
+        firstName: firstName,
+        lastName: lastName,
+        address: address,
+        phone: phone,
+        age: age,
+        gender: gender,
+      );
+      state = AsyncData(updatedUser);
+      return true;
+    } catch (error, stackTrace) {
+      state = previousUser == null
+          ? AsyncError(error, stackTrace)
+          : AsyncData(previousUser);
+      return false;
+    }
+  }
+
+  Future<List<AuthUser>> getUsers() => _repository.getUsers();
+
+  Future<bool> changeUserStatus({
+    required String userId,
+    required String status,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      await _repository.changeUserStatus(userId: userId, status: status);
+      state = AsyncData(_currentUser);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return false;
+    }
+  }
+
   Future<void> refreshUser() async {
     final previousUser = _currentUser;
     try {

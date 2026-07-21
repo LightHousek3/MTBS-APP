@@ -9,6 +9,7 @@ abstract final class AppRoutePaths {
   static const register = '/register';
   static const verifyEmail = '/verify-email';
   static const forgotPassword = '/forgot-password';
+  static const adminUsers = '/admin/users';
   static const movieDetail = '/movie/:movieId';
   static const theaterShowtimes = '/theaters/:theaterId/showtimes';
   static const seatSelection = '/booking/seats/:showtimeId';

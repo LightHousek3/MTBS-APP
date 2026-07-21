@@ -15,6 +15,7 @@ import 'package:mtbs_app/features/booking/presentation/pages/service_selection_p
 import 'package:mtbs_app/features/home/presentation/pages/home_page.dart';
 import 'package:mtbs_app/features/movies/presentation/pages/movie_detail_page.dart';
 import 'package:mtbs_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:mtbs_app/features/profile/presentation/pages/admin_users_page.dart';
 import 'package:mtbs_app/features/promotions/presentation/pages/promotion_detail_page.dart';
 import 'package:mtbs_app/features/promotions/presentation/pages/promotion_list_page.dart';
 import 'package:mtbs_app/features/redeem/presentation/pages/redeem_detail_page.dart';
@@ -87,6 +88,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
           return nextUri.toString();
         },
+      ),
+      GoRoute(
+        path: AppRoutePaths.adminUsers,
+        builder: (_, _) => const AdminUsersPage(),
       ),
       GoRoute(
         path: AppRoutePaths.redeems,
