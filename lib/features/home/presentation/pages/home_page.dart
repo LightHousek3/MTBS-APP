@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:mtbs_app/core/widgets/network_image_card.dart';
 import 'package:mtbs_app/features/festivals/domain/entities/festival.dart';
 import 'package:mtbs_app/features/home/domain/entities/home_banner.dart';
 import 'package:mtbs_app/features/home/presentation/view_models/home_controller.dart';
+import 'package:mtbs_app/features/home/presentation/widgets/home_banner_video_player.dart';
 import 'package:mtbs_app/features/movies/domain/entities/movie.dart';
 import 'package:mtbs_app/features/news/domain/entities/news.dart';
 import 'package:mtbs_app/features/promotions/domain/entities/promotion.dart';
@@ -128,13 +130,71 @@ class _BannerSlideshow extends StatefulWidget {
 }
 
 class _BannerSlideshowState extends State<_BannerSlideshow> {
-  final _controller = PageController();
-  int _page = 0;
+  static const int _loopMultiplier = 1000;
+  static const Duration _imageHoldDuration = Duration(seconds: 5);
+  static const Duration _slideAnimationDuration = Duration(milliseconds: 450);
+
+  late final PageController _controller;
+  Timer? _advanceTimer;
+  late int _page;
+  bool _isAdvancing = false;
+
+  int get _bannerCount => widget.banners.length;
+
+  int get _initialPage => _bannerCount * _loopMultiplier;
+
+  int _normalizedIndex(int index) {
+    final value = index % _bannerCount;
+    return value < 0 ? value + _bannerCount : value;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _page = _initialPage;
+    _controller = PageController(initialPage: _initialPage);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scheduleNextAdvance();
+    });
+  }
 
   @override
   void dispose() {
+    _advanceTimer?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _scheduleNextAdvance() {
+    _advanceTimer?.cancel();
+
+    final banner = widget.banners[_normalizedIndex(_page)];
+    if (banner.isVideo) {
+      return;
+    }
+
+    _advanceTimer = Timer(_imageHoldDuration, _advanceToNextPage);
+  }
+
+  Future<void> _advanceToNextPage() async {
+    if (!mounted || !_controller.hasClients || _isAdvancing) return;
+    if (_bannerCount < 2) return;
+
+    _advanceTimer?.cancel();
+    _isAdvancing = true;
+    try {
+      await _controller.nextPage(
+        duration: _slideAnimationDuration,
+        curve: Curves.easeInOutCubic,
+      );
+    } finally {
+      _isAdvancing = false;
+    }
+  }
+
+  void _handleVideoCompleted(int completedPage) {
+    if (completedPage != _page) return;
+    _advanceToNextPage();
   }
 
   @override
@@ -150,27 +210,19 @@ class _BannerSlideshowState extends State<_BannerSlideshow> {
         children: <Widget>[
           PageView.builder(
             controller: _controller,
-            itemCount: widget.banners.length,
-            onPageChanged: (index) => setState(() => _page = index),
+            onPageChanged: (index) {
+              setState(() => _page = index);
+              _scheduleNextAdvance();
+            },
             itemBuilder: (context, index) {
-              final banner = widget.banners[index];
-              return Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  NetworkImageCard(
-                    imageUrl: banner.url,
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: <Color>[Colors.transparent, Color(0xCC090A0D)],
-                      ),
-                    ),
-                  ),
-                ],
+              final banner = widget.banners[_normalizedIndex(index)];
+              final isActive = index == _page;
+              return _BannerSlide(
+                key: ValueKey<String>('banner-slide-${banner.id}-$index'),
+                banner: banner,
+                isActive: isActive,
+                pageIndex: index,
+                onVideoCompleted: _handleVideoCompleted,
               );
             },
           ),
@@ -181,14 +233,14 @@ class _BannerSlideshowState extends State<_BannerSlideshow> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List<Widget>.generate(
-                widget.banners.length,
+                _bannerCount,
                 (index) => AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
-                  width: _page == index ? 34 : 10,
+                  width: _normalizedIndex(_page) == index ? 34 : 10,
                   height: 10,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
-                    color: _page == index
+                    color: _normalizedIndex(_page) == index
                         ? const Color(0xFFFF4B6E)
                         : Colors.white.withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(999),
@@ -201,6 +253,117 @@ class _BannerSlideshowState extends State<_BannerSlideshow> {
       ),
     );
   }
+}
+
+class _BannerSlide extends StatelessWidget {
+  const _BannerSlide({
+    super.key,
+    required this.banner,
+    required this.isActive,
+    required this.pageIndex,
+    required this.onVideoCompleted,
+  });
+
+  final HomeBanner banner;
+  final bool isActive;
+  final int pageIndex;
+  final ValueChanged<int> onVideoCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = banner.isVideo
+        ? _BannerVideo(
+            url: banner.url,
+            isActive: isActive,
+            pageIndex: pageIndex,
+            onVideoCompleted: onVideoCompleted,
+          )
+        : NetworkImageCard(
+            imageUrl: banner.url,
+            borderRadius: BorderRadius.zero,
+          );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        content,
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[Colors.transparent, Color(0xCC090A0D)],
+            ),
+          ),
+        ),
+        if (banner.isVideo)
+          const Positioned(left: 18, top: 18, child: _VideoBannerBadge()),
+      ],
+    );
+  }
+}
+
+class _BannerVideo extends StatelessWidget {
+  const _BannerVideo({
+    required this.url,
+    required this.isActive,
+    required this.pageIndex,
+    required this.onVideoCompleted,
+  });
+
+  final String url;
+  final bool isActive;
+  final int pageIndex;
+  final ValueChanged<int> onVideoCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isActive) {
+      return const ColoredBox(
+        color: Color(0xFF111318),
+        child: Center(
+          child: Icon(
+            Icons.play_circle_outline,
+            color: Colors.white54,
+            size: 52,
+          ),
+        ),
+      );
+    }
+
+    return HomeBannerVideoPlayer(
+      key: ValueKey<String>('home-banner-video-$pageIndex-$url'),
+      url: url,
+      onCompleted: () => onVideoCompleted(pageIndex),
+    );
+  }
+}
+
+class _VideoBannerBadge extends StatelessWidget {
+  const _VideoBannerBadge();
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.4),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+    ),
+    child: const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.play_circle_outline, color: Colors.white, size: 18),
+          SizedBox(width: 6),
+          Text(
+            'Video',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _MovieShowcase extends StatelessWidget {
@@ -627,7 +790,7 @@ class _HomeDrawer extends StatelessWidget {
         children: <Widget>[
           const ListTile(
             title: Center(child: AppLogo(width: 142, height: 52)),
-            subtitle: Text('Movie Ticket Booking'),
+            subtitle: Center(child: Text('Movie Ticket Booking')),
           ),
           const Divider(),
           ListTile(

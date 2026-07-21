@@ -14,3 +14,7 @@ abstract class HomeBanner with _$HomeBanner {
   factory HomeBanner.fromJson(Map<String, dynamic> json) =>
       _$HomeBannerFromJson(json);
 }
+
+extension HomeBannerTypeX on HomeBanner {
+  bool get isVideo => type.toUpperCase() == 'VIDEO';
+}
