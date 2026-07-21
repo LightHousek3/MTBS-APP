@@ -19,6 +19,8 @@ class AuthRepositoryImpl implements AuthRepository {
   final SocialAuthService _socialAuthService;
   final SessionStore _sessionStore;
   final DeviceIdStore _deviceIdStore;
+  static const _adminMobileLoginMessage =
+      'Tài khoản quản trị chỉ được đăng nhập trên trang quản trị web.';
 
   @override
   Future<AuthUser> login({
@@ -56,6 +58,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   Future<AuthUser> _persistSession(AuthSession session) async {
+    _assertMobileUser(session.user);
     await _sessionStore.saveTokens(
       accessToken: session.tokens.accessToken,
       refreshToken: session.tokens.refreshToken,
@@ -69,6 +72,7 @@ class AuthRepositoryImpl implements AuthRepository {
     if (refreshToken == null) return null;
     try {
       final session = await _service.refresh(refreshToken);
+      _assertMobileUser(session.user);
       await _sessionStore.saveTokens(
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
@@ -78,6 +82,11 @@ class AuthRepositoryImpl implements AuthRepository {
       await _sessionStore.clear();
       rethrow;
     }
+  }
+
+  void _assertMobileUser(AuthUser user) {
+    if (user.canUseMobileApp) return;
+    throw const UnauthorizedException(_adminMobileLoginMessage);
   }
 
   @override
