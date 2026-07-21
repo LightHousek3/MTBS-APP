@@ -2,7 +2,8 @@ abstract final class AppConfig {
   static const appName = 'MTBS';
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:3000/api/v1',
+    // Dùng trực tiếp IP LAN của máy tính để điện thoại thật cắm cáp gọi được
+    defaultValue: 'http://10.75.26.217:3000/api/v1',
   );
   static const connectTimeout = Duration(seconds: 15);
   static const receiveTimeout = Duration(seconds: 20);

@@ -27,10 +27,15 @@ class PaymentPage extends ConsumerStatefulWidget {
 
 class _PaymentPageState extends ConsumerState<PaymentPage> {
   Uri? _paymentUri;
+  String _paymentTitle = 'Thanh toán';
   bool _startingPayment = false;
   bool _handlingPaymentReturn = false;
   bool _webViewLoading = false;
+  bool _expiringPayment = false;
   String? _lastHandledResultKey;
+  String? _activeMomoPaymentId;
+  Timer? _paymentCountdownTimer;
+  InAppWebViewController? _webViewController;
 
   @override
   void initState() {
@@ -51,6 +56,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   @override
+  void dispose() {
+    _paymentCountdownTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_paymentUri case final paymentUri?) {
       return PopScope(
@@ -66,7 +77,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               onPressed: _closePaymentWebView,
               icon: const Icon(Icons.arrow_back),
             ),
-            title: const Text('Thanh toán VNPay'),
+            title: Text(_paymentTitle),
           ),
           body: Stack(
             children: <Widget>[
@@ -78,7 +89,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   supportZoom: false,
                   transparentBackground: false,
                 ),
+                onWebViewCreated: (controller) {
+                  _webViewController = controller;
+                },
                 onLoadStart: (_, url) {
+                  if (_expiringPayment) return;
                   if (_tryHandlePaymentUri(url)) {
                     return;
                   }
@@ -87,6 +102,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   }
                 },
                 onLoadStop: (_, url) {
+                  if (_expiringPayment) return;
                   if (_tryHandlePaymentUri(url)) {
                     return;
                   }
@@ -298,7 +314,21 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               color: Colors.white,
             ),
             isLoading: _startingPayment,
-            onPressed: _startingPayment ? null : _pay,
+            onPressed: _startingPayment ? null : () => _pay('vnpay'),
+          ),
+          const SizedBox(height: 10),
+          GradientButton(
+            label: 'Thanh toán ATM nội địa qua MoMo',
+            icon: const Icon(Icons.account_balance, color: Colors.white),
+            isLoading: _startingPayment,
+            onPressed: _startingPayment ? null : () => _pay('momo'),
+          ),
+          const SizedBox(height: 10),
+          GradientButton(
+            label: 'Thanh toán ATM nội địa qua ZaloPay',
+            icon: const Icon(Icons.account_balance, color: Colors.white),
+            isLoading: _startingPayment,
+            onPressed: _startingPayment ? null : () => _pay('zalopay'),
           ),
           const SizedBox(height: 8),
           TextButton(onPressed: _cancel, child: const Text('Hủy đơn hàng')),
@@ -311,6 +341,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
+        if (booking.status == 'CONFIRMED') ...<Widget>[
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => context.go(AppRoutePaths.accountBookingHistory()),
+            icon: const Icon(Icons.history),
+            label: const Text('Xem lịch sử vé'),
+          ),
+        ],
       ],
     );
   }
@@ -368,17 +406,23 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     ),
   );
 
-  Future<void> _pay() async {
+  Future<void> _pay(String method) async {
     setState(() => _startingPayment = true);
     try {
-      final url = await ref.read(paymentUrlProvider(widget.bookingId).future);
-      final paymentUri = Uri.parse(url);
+      final session = await ref
+          .read(bookingRepositoryProvider)
+          .createPaymentSession(widget.bookingId, method: method);
+      final paymentUri = Uri.parse(session.paymentUrl);
       if (mounted) {
         setState(() {
           _paymentUri = paymentUri;
+          _paymentTitle = 'Thanh toán ${_paymentMethodLabel(method)}';
           _startingPayment = false;
           _webViewLoading = true;
         });
+        if (method == 'momo') {
+          _startMomoCountdown(session);
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -407,6 +451,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       return;
     }
     _handlingPaymentReturn = true;
+    _stopPaymentCountdown();
 
     try {
       setState(() {
@@ -451,10 +496,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   Future<void> _handleWebViewError(String description) async {
-    if (!mounted || _handlingPaymentReturn) {
+    if (!mounted || _handlingPaymentReturn || _expiringPayment) {
       return;
     }
     _handlingPaymentReturn = true;
+    _stopPaymentCountdown();
 
     try {
       setState(() {
@@ -473,7 +519,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       final message = latestBooking.status == 'CONFIRMED'
           ? 'Thanh toán thành công.'
-          : 'Không thể tải cổng thanh toán VNPay. Vui lòng thử lại.';
+          : 'Không thể tải cổng thanh toán. Vui lòng thử lại.';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -517,6 +563,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     if (!mounted || _paymentUri == null) {
       return;
     }
+    _stopPaymentCountdown();
     setState(() {
       _paymentUri = null;
       _webViewLoading = false;
@@ -538,14 +585,90 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     if (uri.scheme == 'mtbs' &&
         uri.host.isEmpty &&
         uri.path == '/payment-result') {
+      if (_expiringPayment) return true;
       unawaited(_handlePaymentReturn(uri));
       return true;
     }
     return false;
   }
 
+  void _startMomoCountdown(PaymentSession session) {
+    _paymentCountdownTimer?.cancel();
+    final paymentId = session.paymentId;
+    final remaining = session.remainingDuration;
+    if (paymentId == null || remaining == null) return;
+
+    _activeMomoPaymentId = paymentId;
+    if (remaining.inMilliseconds <= 0) {
+      unawaited(_expireMomoPayment());
+      return;
+    }
+
+    _paymentCountdownTimer = Timer(remaining, () {
+      if (mounted) unawaited(_expireMomoPayment());
+    });
+  }
+
+  void _stopPaymentCountdown() {
+    _paymentCountdownTimer?.cancel();
+    _paymentCountdownTimer = null;
+    _activeMomoPaymentId = null;
+    _webViewController = null;
+  }
+
+  Future<void> _expireMomoPayment() async {
+    final paymentId = _activeMomoPaymentId;
+    if (!mounted ||
+        paymentId == null ||
+        _expiringPayment ||
+        _handlingPaymentReturn) {
+      return;
+    }
+    _expiringPayment = true;
+    _paymentCountdownTimer?.cancel();
+
+    try {
+      await _webViewController?.stopLoading();
+    } catch (_) {
+      // The WebView may already be closing when the timer reaches zero.
+    }
+
+    if (mounted) {
+      setState(() {
+        _paymentUri = null;
+        _webViewLoading = false;
+      });
+    }
+
+    try {
+      final expired = await ref
+          .read(bookingRepositoryProvider)
+          .expireMomoPayment(paymentId);
+      ref.invalidate(bookingDetailsProvider(widget.bookingId));
+      await ref.read(pendingBookingControllerProvider.notifier).refresh();
+      if (mounted) {
+        final message = expired
+            ? 'Đơn hàng đã hết thời gian thanh toán. Vui lòng đặt vé lại.'
+            : 'Giao dịch đã được xử lý thành công.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (error) {
+      if (mounted) showAppErrorSnackBar(context, error);
+    } finally {
+      _stopPaymentCountdown();
+      _expiringPayment = false;
+    }
+  }
+
   bool _isTrustedVnpayHost(String host) =>
-      host == 'sandbox.vnpayment.vn' || host.endsWith('.vnpayment.vn');
+      host == 'sandbox.vnpayment.vn' ||
+      host.endsWith('.vnpayment.vn') ||
+      host == 'test-payment.momo.vn' ||
+      host.endsWith('.momo.vn') ||
+      host == 'sb-openapi.zalopay.vn' ||
+      host.endsWith('.zalopay.vn');
 
   Future<void> _cancel() async {
     final confirmed = await showDialog<bool>(
@@ -582,6 +705,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     }
   }
 }
+
+String _paymentMethodLabel(String method) => switch (method) {
+  'momo' => 'MoMo',
+  'zalopay' => 'ZaloPay',
+  _ => 'VNPay',
+};
 
 class _ServicePriceLine extends StatelessWidget {
   const _ServicePriceLine({required this.service});

@@ -11,7 +11,6 @@ class HomeApiService {
     final response = await _client.get<Map<String, dynamic>>(
       '/banners',
       queryParameters: const <String, dynamic>{
-        'type': 'IMAGE',
         'limit': 10,
         'sortBy': 'createdAt:desc',
       },

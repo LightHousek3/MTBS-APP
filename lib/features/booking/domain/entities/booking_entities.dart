@@ -168,15 +168,18 @@ class BookingShowtime {
   const BookingShowtime({
     required this.id,
     required this.startTime,
+    this.endTime,
     this.movie,
     this.theater,
     this.screenName = '',
   });
   final String id;
   final DateTime startTime;
+  final DateTime? endTime;
   final BookingMovie? movie;
   final BookingTheater? theater;
   final String screenName;
+  bool get hasEnded => (endTime ?? startTime).isBefore(DateTime.now());
   factory BookingShowtime.fromJson(Map<String, dynamic> json) {
     final screen = _map(json['screen']);
     final movie = _map(json['movie']);
@@ -186,6 +189,7 @@ class BookingShowtime {
       startTime:
           DateTime.tryParse(_string(json['startTime']))?.toLocal() ??
           DateTime.now(),
+      endTime: DateTime.tryParse(_string(json['endTime']))?.toLocal(),
       movie: movie.isEmpty ? null : BookingMovie.fromJson(movie),
       theater: theater.isEmpty ? null : BookingTheater.fromJson(theater),
       screenName: _string(screen['name']),
@@ -208,6 +212,7 @@ class Booking {
     required this.createdAt,
     required this.expiresAt,
     this.qrCode,
+    this.refundRequest,
   });
   final String id;
   final BookingShowtime showtime;
@@ -222,8 +227,13 @@ class Booking {
   final DateTime createdAt;
   final DateTime expiresAt;
   final String? qrCode;
+  final RefundRequest? refundRequest;
   bool get isPending =>
       status == 'PENDING' && expiresAt.isAfter(DateTime.now());
+  bool get canRequestRefund =>
+      status == 'CONFIRMED' &&
+      refundRequest == null &&
+      showtime.startTime.difference(DateTime.now()).inHours >= 12;
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     final seats = _list(
@@ -251,6 +261,9 @@ class Booking {
       pointsEarned: (json['pointsEarned'] as num?)?.toInt() ?? 0,
       totalPrice: _double(json['totalPrice']),
       qrCode: json['qrCode']?.toString(),
+      refundRequest: _map(json['refundRequest']).isEmpty
+          ? null
+          : RefundRequest.fromJson(_map(json['refundRequest'])),
       createdAt:
           DateTime.tryParse(_string(json['createdAt']))?.toLocal() ??
           DateTime.now(),
@@ -276,6 +289,60 @@ class Booking {
     if (totalPrice > 0) return totalPrice;
     final total = ticketFinalTotal + concessionFinalTotal - pointsUsed;
     return total < 0 ? 0 : total;
+  }
+}
+
+class RefundRequest {
+  const RefundRequest({
+    required this.id,
+    required this.reason,
+    required this.status,
+    required this.refundAmount,
+    required this.createdAt,
+    this.response,
+    this.refundedAt,
+  });
+
+  final String id;
+  final String reason;
+  final String status;
+  final double refundAmount;
+  final DateTime createdAt;
+  final String? response;
+  final DateTime? refundedAt;
+
+  bool get isPending => status == 'PENDING';
+
+  factory RefundRequest.fromJson(Map<String, dynamic> json) => RefundRequest(
+    id: _id(json),
+    reason: _string(json['reason']),
+    status: _string(json['status']),
+    refundAmount: _double(json['refundAmount']),
+    response: json['response']?.toString(),
+    createdAt:
+        DateTime.tryParse(_string(json['createdAt']))?.toLocal() ??
+        DateTime.now(),
+    refundedAt: DateTime.tryParse(_string(json['refundedAt']))?.toLocal(),
+  );
+}
+
+class PaymentSession {
+  const PaymentSession({
+    required this.paymentUrl,
+    this.paymentId,
+    this.expiresAt,
+    this.serverTime,
+  });
+
+  final String paymentUrl;
+  final String? paymentId;
+  final DateTime? expiresAt;
+  final DateTime? serverTime;
+
+  Duration? get remainingDuration {
+    if (expiresAt == null || serverTime == null) return null;
+    final remaining = expiresAt!.difference(serverTime!);
+    return remaining.isNegative ? Duration.zero : remaining;
   }
 }
 

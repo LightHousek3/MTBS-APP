@@ -16,5 +16,15 @@ abstract interface class BookingRepository {
   });
   Future<Booking> getBooking(String bookingId);
   Future<Booking> cancelBooking(String bookingId);
-  Future<String> createPaymentUrl(String bookingId);
+  Future<String> createPaymentUrl(String bookingId, {String method = 'vnpay'});
+  Future<PaymentSession> createPaymentSession(
+    String bookingId, {
+    String method = 'vnpay',
+  });
+  Future<bool> expireMomoPayment(String paymentId);
+  Future<RefundRequest> createRefundRequest({
+    required String bookingId,
+    required String reason,
+  });
+  Future<RefundRequest> cancelRefundRequest(String refundRequestId);
 }

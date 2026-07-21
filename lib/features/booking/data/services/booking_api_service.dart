@@ -93,16 +93,64 @@ class BookingApiService {
     (await _client.patch<Map<String, dynamic>>('/bookings/$id/cancel')).data!,
   );
 
-  Future<String> createPaymentUrl(String bookingId) async {
+  Future<String> createPaymentUrl(
+    String bookingId, {
+    String method = 'vnpay',
+  }) async =>
+      (await createPaymentSession(bookingId, method: method)).paymentUrl;
+
+  Future<PaymentSession> createPaymentSession(
+    String bookingId, {
+    String method = 'vnpay',
+  }) async {
     final response = await _client.post<Map<String, dynamic>>(
-      '/payments/vnpay',
+      '/payments/$method',
       data: <String, dynamic>{
         'bookingId': bookingId,
         'appReturnUrl': 'mtbs:///payment-result',
       },
     );
-    return (response.data!['data'] as Map<String, dynamic>)['paymentUrl']!
-        as String;
+    final data = response.data!['data']! as Map<String, dynamic>;
+    return PaymentSession(
+      paymentUrl: data['paymentUrl']! as String,
+      paymentId: data['paymentId']?.toString(),
+      expiresAt: DateTime.tryParse(
+        data['expiresAt']?.toString() ?? '',
+      )?.toLocal(),
+      serverTime: DateTime.tryParse(
+        data['serverTime']?.toString() ?? '',
+      )?.toLocal(),
+    );
+  }
+
+  Future<bool> expireMomoPayment(String paymentId) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/payments/momo/$paymentId/expire',
+    );
+    final data = response.data!['data']! as Map<String, dynamic>;
+    return data['expired'] == true;
+  }
+
+  Future<RefundRequest> createRefundRequest({
+    required String bookingId,
+    required String reason,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/refund-requests',
+      data: <String, dynamic>{'bookingId': bookingId, 'reason': reason},
+    );
+    return RefundRequest.fromJson(
+      response.data!['data']! as Map<String, dynamic>,
+    );
+  }
+
+  Future<RefundRequest> cancelRefundRequest(String id) async {
+    final response = await _client.patch<Map<String, dynamic>>(
+      '/refund-requests/$id/cancel',
+    );
+    return RefundRequest.fromJson(
+      response.data!['data']! as Map<String, dynamic>,
+    );
   }
 
   Booking _booking(Map<String, dynamic> json) =>

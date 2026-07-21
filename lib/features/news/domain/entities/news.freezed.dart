@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$News {
 
- String get id; String get title; String get subtitle; String? get imageUrl;
+ String get id; String get title; String get subtitle; String? get content; String? get imageUrl; String? get category; DateTime? get createdAt;
 /// Create a copy of News
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $NewsCopyWith<News> get copyWith => _$NewsCopyWithImpl<News>(this as News, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is News&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is News&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,subtitle,imageUrl);
+int get hashCode => Object.hash(runtimeType,id,title,subtitle,content,imageUrl,category,createdAt);
 
 @override
 String toString() {
-  return 'News(id: $id, title: $title, subtitle: $subtitle, imageUrl: $imageUrl)';
+  return 'News(id: $id, title: $title, subtitle: $subtitle, content: $content, imageUrl: $imageUrl, category: $category, createdAt: $createdAt)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $NewsCopyWith<$Res>  {
   factory $NewsCopyWith(News value, $Res Function(News) _then) = _$NewsCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String subtitle, String? imageUrl
+ String id, String title, String subtitle, String? content, String? imageUrl, String? category, DateTime? createdAt
 });
 
 
@@ -62,13 +62,16 @@ class _$NewsCopyWithImpl<$Res>
 
 /// Create a copy of News
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? imageUrl = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? content = freezed,Object? imageUrl = freezed,Object? category = freezed,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,subtitle: null == subtitle ? _self.subtitle : subtitle // ignore: cast_nullable_to_non_nullable
-as String,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String,content: freezed == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -153,10 +156,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? imageUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? content,  String? imageUrl,  String? category,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _News() when $default != null:
-return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
+return $default(_that.id,_that.title,_that.subtitle,_that.content,_that.imageUrl,_that.category,_that.createdAt);case _:
   return orElse();
 
 }
@@ -174,10 +177,10 @@ return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? imageUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String subtitle,  String? content,  String? imageUrl,  String? category,  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _News():
-return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
+return $default(_that.id,_that.title,_that.subtitle,_that.content,_that.imageUrl,_that.category,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +197,10 @@ return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String subtitle,  String? imageUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String subtitle,  String? content,  String? imageUrl,  String? category,  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _News() when $default != null:
-return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
+return $default(_that.id,_that.title,_that.subtitle,_that.content,_that.imageUrl,_that.category,_that.createdAt);case _:
   return null;
 
 }
@@ -209,13 +212,16 @@ return $default(_that.id,_that.title,_that.subtitle,_that.imageUrl);case _:
 
 
 class _News implements News {
-  const _News({required this.id, required this.title, required this.subtitle, this.imageUrl});
+  const _News({required this.id, required this.title, required this.subtitle, this.content, this.imageUrl, this.category, this.createdAt});
   
 
 @override final  String id;
 @override final  String title;
 @override final  String subtitle;
+@override final  String? content;
 @override final  String? imageUrl;
+@override final  String? category;
+@override final  DateTime? createdAt;
 
 /// Create a copy of News
 /// with the given fields replaced by the non-null parameter values.
@@ -227,16 +233,16 @@ _$NewsCopyWith<_News> get copyWith => __$NewsCopyWithImpl<_News>(this, _$identit
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _News&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _News&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,subtitle,imageUrl);
+int get hashCode => Object.hash(runtimeType,id,title,subtitle,content,imageUrl,category,createdAt);
 
 @override
 String toString() {
-  return 'News(id: $id, title: $title, subtitle: $subtitle, imageUrl: $imageUrl)';
+  return 'News(id: $id, title: $title, subtitle: $subtitle, content: $content, imageUrl: $imageUrl, category: $category, createdAt: $createdAt)';
 }
 
 
@@ -247,7 +253,7 @@ abstract mixin class _$NewsCopyWith<$Res> implements $NewsCopyWith<$Res> {
   factory _$NewsCopyWith(_News value, $Res Function(_News) _then) = __$NewsCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String subtitle, String? imageUrl
+ String id, String title, String subtitle, String? content, String? imageUrl, String? category, DateTime? createdAt
 });
 
 
@@ -264,13 +270,16 @@ class __$NewsCopyWithImpl<$Res>
 
 /// Create a copy of News
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? imageUrl = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? subtitle = null,Object? content = freezed,Object? imageUrl = freezed,Object? category = freezed,Object? createdAt = freezed,}) {
   return _then(_News(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,subtitle: null == subtitle ? _self.subtitle : subtitle // ignore: cast_nullable_to_non_nullable
-as String,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String,content: freezed == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
