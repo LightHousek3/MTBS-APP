@@ -168,15 +168,18 @@ class BookingShowtime {
   const BookingShowtime({
     required this.id,
     required this.startTime,
+    this.endTime,
     this.movie,
     this.theater,
     this.screenName = '',
   });
   final String id;
   final DateTime startTime;
+  final DateTime? endTime;
   final BookingMovie? movie;
   final BookingTheater? theater;
   final String screenName;
+  bool get hasEnded => (endTime ?? startTime).isBefore(DateTime.now());
   factory BookingShowtime.fromJson(Map<String, dynamic> json) {
     final screen = _map(json['screen']);
     final movie = _map(json['movie']);
@@ -186,6 +189,7 @@ class BookingShowtime {
       startTime:
           DateTime.tryParse(_string(json['startTime']))?.toLocal() ??
           DateTime.now(),
+      endTime: DateTime.tryParse(_string(json['endTime']))?.toLocal(),
       movie: movie.isEmpty ? null : BookingMovie.fromJson(movie),
       theater: theater.isEmpty ? null : BookingTheater.fromJson(theater),
       screenName: _string(screen['name']),

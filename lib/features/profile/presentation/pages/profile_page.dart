@@ -154,11 +154,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     showDialog<void>(
       context: context,
       builder: (_) => _BookingDetailDialog(
-        bookingId: booking.id,
+        booking: booking,
         isCancelling: _cancellingBookings.contains(booking.id),
         onCancel: _cancelBooking,
+        onRefundChanged: _handleRefundChanged,
       ),
     );
+  }
+
+  void _handleRefundChanged(String bookingId, String successMessage) {
+    ref
+      ..invalidate(bookingDetailsProvider(bookingId))
+      ..invalidate(bookingHistoryProvider(_bookingStatus));
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(successMessage)));
   }
 
   Future<void> _removeWaitlistMovie(WaitlistItem item) async {
@@ -661,10 +673,10 @@ class _BookingFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     const filters = <String, String>{
       'ALL': 'Tất cả',
-      'PENDING': 'Chờ chiếu',
-      'CONFIRMED': 'Đã xem',
+      'PENDING': 'Chờ thanh toán',
+      'CONFIRMED': 'Đã xác nhận',
       'CANCELLED': 'Đã hủy',
-      'REFUNDED': 'Hoàn tiền',
+      'REFUNDED': 'Đã hoàn tiền',
     };
 
     return SizedBox(
@@ -770,7 +782,7 @@ class _BookingHistoryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  _BookingStatusPill(status: booking.status),
+                  _BookingStatusPill(booking: booking),
                 ],
               ),
               const SizedBox(height: 10),
@@ -825,40 +837,28 @@ class _BookingHistoryCard extends StatelessWidget {
 
 class _BookingDetailDialog extends ConsumerWidget {
   const _BookingDetailDialog({
-    required this.bookingId,
+    required this.booking,
     required this.isCancelling,
     required this.onCancel,
+    required this.onRefundChanged,
   });
 
-  final String bookingId;
+  final Booking booking;
   final bool isCancelling;
   final ValueChanged<Booking> onCancel;
+  final void Function(String bookingId, String successMessage) onRefundChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final details = ref.watch(bookingDetailsProvider(bookingId));
-
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 430),
-        child: details.when(
-          loading: () => const SizedBox(
-            height: 220,
-            child: Center(child: AppHashLoader()),
-          ),
-          error: (error, _) => Padding(
-            padding: const EdgeInsets.all(18),
-            child: AsyncErrorView(
-              error: error,
-              onRetry: () => ref.invalidate(bookingDetailsProvider(bookingId)),
-            ),
-          ),
-          data: (booking) => _BookingDetailContent(
-            booking: booking,
-            isCancelling: isCancelling,
-            onCancel: onCancel,
-          ),
+        child: _BookingDetailContent(
+          booking: booking,
+          isCancelling: isCancelling,
+          onCancel: onCancel,
+          onRefundChanged: onRefundChanged,
         ),
       ),
     );
@@ -870,11 +870,13 @@ class _BookingDetailContent extends ConsumerWidget {
     required this.booking,
     required this.isCancelling,
     required this.onCancel,
+    required this.onRefundChanged,
   });
 
   final Booking booking;
   final bool isCancelling;
   final ValueChanged<Booking> onCancel;
+  final void Function(String bookingId, String successMessage) onRefundChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -931,7 +933,7 @@ class _BookingDetailContent extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _BookingStatusPill(status: booking.status),
+                    _BookingStatusPill(booking: booking),
                     const SizedBox(height: 10),
                     _MovieMetaLine(
                       icon: Icons.location_on_outlined,
@@ -1003,7 +1005,10 @@ class _BookingDetailContent extends ConsumerWidget {
           ],
           if (booking.status == 'CONFIRMED') ...[
             const SizedBox(height: 12),
-            _RefundActionButton(booking: booking),
+            _RefundActionButton(
+              booking: booking,
+              onRefundChanged: onRefundChanged,
+            ),
           ],
         ],
       ),
@@ -1012,9 +1017,13 @@ class _BookingDetailContent extends ConsumerWidget {
 }
 
 class _RefundActionButton extends ConsumerWidget {
-  const _RefundActionButton({required this.booking});
+  const _RefundActionButton({
+    required this.booking,
+    required this.onRefundChanged,
+  });
 
   final Booking booking;
+  final void Function(String bookingId, String successMessage) onRefundChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1070,7 +1079,9 @@ class _RefundActionButton extends ConsumerWidget {
         ],
       ),
     );
-    controller.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+    });
 
     if (!context.mounted || reason == null) return;
     if (reason.length < 5) {
@@ -1084,13 +1095,12 @@ class _RefundActionButton extends ConsumerWidget {
       await ref
           .read(bookingRepositoryProvider)
           .createRefundRequest(bookingId: booking.id, reason: reason);
-      ref
-        ..invalidate(bookingDetailsProvider(booking.id))
-        ..invalidate(bookingHistoryProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã gửi yêu cầu hoàn tiền.')),
-      );
+      onRefundChanged(booking.id, 'Đã gửi yêu cầu hoàn tiền.');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        Navigator.of(context, rootNavigator: true).maybePop();
+      });
     } catch (error) {
       if (context.mounted) showAppErrorSnackBar(context, error);
     }
@@ -1138,13 +1148,12 @@ class _RefundActionButton extends ConsumerWidget {
 
     try {
       await ref.read(bookingRepositoryProvider).cancelRefundRequest(refund.id);
-      ref
-        ..invalidate(bookingDetailsProvider(booking.id))
-        ..invalidate(bookingHistoryProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã hủy yêu cầu hoàn tiền.')),
-      );
+      onRefundChanged(booking.id, 'Đã hủy yêu cầu hoàn tiền.');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        Navigator.of(context, rootNavigator: true).maybePop();
+      });
     } catch (error) {
       if (context.mounted) showAppErrorSnackBar(context, error);
     }
@@ -1199,17 +1208,20 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _BookingStatusPill extends StatelessWidget {
-  const _BookingStatusPill({required this.status});
+  const _BookingStatusPill({required this.booking});
 
-  final String status;
+  final Booking booking;
+
+  String get _status => _bookingDisplayStatus(booking);
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
+    final color = switch (_status) {
       'PENDING' => Colors.orange,
       'CONFIRMED' => Colors.green,
       'CANCELLED' => Theme.of(context).colorScheme.error,
       'REFUNDED' => Colors.teal,
+      'REFUND_PENDING' => Colors.amber,
       _ => Theme.of(context).colorScheme.onSurfaceVariant,
     };
 
@@ -1222,12 +1234,13 @@ class _BookingStatusPill extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         child: Text(
-          switch (status) {
-            'PENDING' => 'Sắp chiếu',
-            'CONFIRMED' => 'Đã xem',
+          switch (_status) {
+            'PENDING' => 'Chờ thanh toán',
+            'CONFIRMED' => 'Đã xác nhận',
             'CANCELLED' => 'Đã hủy',
-            'REFUNDED' => 'Hoàn tiền',
-            _ => status,
+            'REFUNDED' => 'Đã hoàn tiền',
+            'REFUND_PENDING' => 'Đang yêu cầu hoàn tiền',
+            _ => _status,
           },
           style: TextStyle(
             color: color,
@@ -1977,6 +1990,14 @@ class _MenuRow extends StatelessWidget {
 String _shortBookingCode(String id) {
   if (id.length <= 10) return id;
   return id.substring(id.length - 10);
+}
+
+String _bookingDisplayStatus(Booking booking) {
+  final refundStatus = booking.refundRequest?.status;
+  if (refundStatus == 'PENDING') return 'REFUND_PENDING';
+  if (refundStatus == 'APPROVED') return 'REFUNDED';
+  if (refundStatus == 'REJECTED') return 'CANCELLED';
+  return booking.status;
 }
 
 String _refundStatusText(String status) => switch (status) {
